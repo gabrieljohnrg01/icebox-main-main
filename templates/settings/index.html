@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="glass-card mb-lg relative overflow-hidden">
+    <!-- Background Gradient element for visual pop -->
+    <div
+        style="position: absolute; top: 0; right: 0; width: 300px; height: 300px; background: radial-gradient(circle, var(--bg-gradient-1) 0%, transparent 70%); opacity: 0.5; pointer-events: none;">
+    </div>
+
+    <div class="flex justify-between items-center mb-sm">
+        <h2 style="font-size: 1.35rem; font-weight: 700;">Account Settings</h2>
+    </div>
+
+    <!-- User Profile Picture -->
+    <div class="glass-container" style="padding: 1rem; margin-bottom: 1.25rem; border-radius: var(--radius-md);">
+        <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.35rem;">Profile Picture</h3>
+        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Upload or change your profile picture.</p>
+
+        <div class="flex items-center gap-md" style="flex-wrap: wrap;">
+            <div style="position: relative;">
+                {% if user.profile_picture %}
+                <img id="avatar-preview" src="{{ user.profile_picture.url }}" alt="Profile"
+                    style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color);">
+                {% else %}
+                <div id="avatar-preview"
+                    style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-color), var(--brand-teal)); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.25rem; color: #fff; text-transform: uppercase; border: 2px solid var(--border-color);">
+                    {{ user.first_name|slice:":1" }}{{ user.last_name|slice:":1" }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div style="flex: 1;">
+                <form method="post" action="{% url 'settings' %}" enctype="multipart/form-data" style="margin-bottom: 0.35rem;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="upload_picture">
+                    <div class="flex items-center gap-xs" style="flex-wrap: wrap;">
+                        <input type="file" name="profile_picture" accept="image/*" id="picture-input"
+                            class="form-control" style="font-size: 0.75rem; padding: 0.3rem; flex: 1; min-width: 180px;">
+                        <button type="submit" class="btn btn-primary" style="font-size: 0.75rem; padding: 0.4rem 1rem;">Upload</button>
+                    </div>
+                </form>
+
+                {% if user.profile_picture %}
+                <form method="post" action="{% url 'settings' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="remove_picture">
+                    <button type="submit" class="btn btn-ghost" style="font-size: 0.7rem; color: var(--danger-color); padding: 0.25rem 0.5rem;"
+                        onclick="return confirm('Remove your profile picture?')">Remove Picture</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- UI Zoom Control -->
+    <div class="glass-container" style="padding: 1rem; margin-bottom: 1.25rem; border-radius: var(--radius-md);">
+        <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.35rem;">UI Zoom</h3>
+        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Adjust the interface size to your preference.</p>
+        <div class="flex items-center gap-md" style="flex-wrap: wrap;">
+            <span style="font-size: 0.75rem; color: var(--text-tertiary);">A</span>
+            <input type="range" id="zoom-slider" min="10" max="20" step="0.5" style="flex: 1; max-width: 300px; cursor: pointer; accent-color: var(--accent-color);">
+            <span style="font-size: 1.1rem; color: var(--text-tertiary);">A</span>
+            <span id="zoom-value" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); min-width: 45px; text-align: center;"></span>
+            <button type="button" id="zoom-reset" class="btn btn-ghost" style="font-size: 0.7rem; padding: 0.25rem 0.6rem; color: var(--accent-color);">Reset</button>
+        </div>
+    </div>
+    <script>
+        (function() {
+            const slider = document.getElementById('zoom-slider');
+            const label = document.getElementById('zoom-value');
+            const resetBtn = document.getElementById('zoom-reset');
+            const defaultZoom = 14;
+
+            // Load saved value
+            const saved = parseFloat(localStorage.getItem('uiZoom')) || defaultZoom;
+            slider.value = saved;
+            document.documentElement.style.fontSize = saved + 'px';
+            label.textContent = Math.round((saved / 16) * 100) + '%';
+
+            slider.addEventListener('input', function() {
+                const val = parseFloat(this.value);
+                document.documentElement.style.fontSize = val + 'px';
+                localStorage.setItem('uiZoom', val);
+                label.textContent = Math.round((val / 16) * 100) + '%';
+            });
+
+            resetBtn.addEventListener('click', function() {
+                slider.value = defaultZoom;
+                document.documentElement.style.fontSize = defaultZoom + 'px';
+                localStorage.setItem('uiZoom', defaultZoom);
+                label.textContent = Math.round((defaultZoom / 16) * 100) + '%';
+            });
+        })();
+    </script>
+
+    <!-- User preferences (Password) -->
+    <div style="margin-bottom: 1.25rem;">
+        <!-- Password Settings -->
+        <div class="glass-container" style="padding: 1rem; border-radius: var(--radius-md); max-width: 480px;">
+            <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.35rem;">Change Password</h3>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Update your account password.</p>
+
+            <form method="post" action="{% url 'settings' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="change_password">
+
+                {% for field in password_form %}
+                <div style="margin-bottom: 0.6rem;">
+                    <label style="display: block; font-size: 0.75rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.3rem;" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                    <small style="font-size: 0.7rem; color: var(--text-tertiary);">{{ field.help_text|safe }}</small>
+                    {% endif %}
+                    {% if field.errors %}
+                    <div style="font-size: 0.7rem; color: var(--danger-color); margin-top: 3px;">
+                        {% for error in field.errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <button type="submit" class="btn btn-primary" style="font-size: 0.8rem; padding: 0.45rem 1.25rem; margin-top: 0.25rem;">Update Password</button>
+            </form>
+        </div>
+    </div>
+
+    {% if is_admin %}
+    <!-- Admin Global Templates Settings -->
+    <div style="border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+        <h2 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.2rem;">Global Templates Management</h2>
+        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Manage the baseline Milestone and Deliverable templates used for new startups.</p>
+
+        <!-- Add Milestone Template -->
+        <div style="margin-bottom: 1.25rem;">
+            <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem;">Milestone Templates</h3>
+            <form action="{% url 'add_milestone_template' %}" method="post" class="flex items-end gap-xs" style="margin-bottom: 0.75rem;">
+                {% csrf_token %}
+                <div style="flex: 1; max-width: 220px;">
+                    <label style="display: block; font-size: 0.7rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.25rem;">How many deliverables?</label>
+                    <input type="number" name="deliverables_count" class="form-control" placeholder="Number of deliverables" required min="0" inputmode="numeric" pattern="[0-9]*" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="font-size: 0.8rem; padding: 0.4rem 0.6rem;">
+                </div>
+                <button type="submit" class="btn btn-primary" style="font-size: 0.8rem; padding: 0.4rem 1rem;">+ Add Milestone</button>
+            </form>
+
+            <!-- List of existing templates -->
+            <div class="timeline-container">
+                {% for template in milestone_templates %}
+                <div class="glass-container" style="padding: 0.75rem 1rem; margin-bottom: 0.6rem; border-radius: var(--radius-md);">
+                    <div class="flex justify-between items-start" style="cursor: pointer; margin-bottom: 0.35rem;" onclick="const el = document.getElementById('deliv-ms-{{ template.id }}'); const icon = document.getElementById('icon-ms-{{ template.id }}'); if(el.style.display === 'none') { el.style.display = 'block'; icon.style.transform = 'rotate(90deg)'; } else { el.style.display = 'none'; icon.style.transform = 'rotate(0deg)'; }">
+                        <div>
+                            <h4 style="font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 0.35rem;">
+                                <svg id="icon-ms-{{ template.id }}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition: transform 0.2s;"><path d="M9 18l6-6-6-6"/></svg>
+                                {{ template.title }}
+                            </h4>
+                            {% if template.description %}<p style="font-size: 0.75rem; color: var(--text-secondary);">{{ template.description }}</p>{% endif %}
+                        </div>
+                        <div class="flex gap-xs" onclick="event.stopPropagation()">
+                            <button type="button" class="btn btn-ghost" onclick="document.getElementById('edit-ms-{{ template.id }}').style.display = document.getElementById('edit-ms-{{ template.id }}').style.display === 'none' ? 'block' : 'none';" style="font-size: 0.7rem; padding: 0.2rem 0.5rem; color: var(--accent-color);">Edit</button>
+                            <form action="{% url 'delete_milestone_template' template.id %}" method="post"
+                                onsubmit="return confirm('Are you sure you want to delete this template? Details mapping will be lost.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Edit Milestone Form Toggle -->
+                    <div id="edit-ms-{{ template.id }}" style="display: none; padding: 8px; background: var(--subtle-overlay); border-radius: var(--radius-sm); margin-bottom: 10px;">
+                        <form action="{% url 'edit_milestone_template' template.id%}" method="post" class="flex items-end gap-xs">
+                            {% csrf_token %}
+                            <div style="flex: 1;">
+                                <label style="font-size: 0.65rem; color: var(--text-secondary);">Title</label>
+                                <input type="text" name="title" value="{{ template.title }}" class="form-control" style="font-size:0.75rem; padding: 0.3rem 0.5rem;" required>
+                            </div>
+                            <div style="flex: 2;">
+                                <label style="font-size: 0.65rem; color: var(--text-secondary);">Description</label>
+                                <input type="text" name="description" value="{{ template.description|default:'' }}" class="form-control" style="font-size:0.75rem; padding: 0.3rem 0.5rem;">
+                            </div>
+                            <div style="width: 60px;">
+                                <label style="font-size: 0.65rem; color: var(--text-secondary);">Order</label>
+                                <input type="number" name="milestone_progress" value="{{ template.milestone_progress }}" class="form-control" style="font-size:0.75rem; padding: 0.3rem 0.5rem;" required min="1">
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="font-size: 0.7rem; padding: 0.3rem 0.6rem;">Save</button>
+                        </form>
+                    </div>
+
+                    <!-- Deliverable Templates within this Milestone Template -->
+                    <div id="deliv-ms-{{ template.id }}" style="display: none; padding-left: 1rem; margin-top: 0.5rem; border-left: 2px solid var(--border-color);">
+                        <h5 style="font-size: 0.65rem; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.4rem;">Deliverables</h5>
+
+                        <!-- List -->
+                        <ul style="list-style: none; padding: 0; margin-bottom: 0.5rem;">
+                            {% for dt in template.deliverable_templates.all %}
+                            <li class="flex justify-between items-center" style="padding: 0.4rem 0.6rem; margin-bottom: 0.25rem; border-radius: var(--radius-sm);">
+                                <div>
+                                    <span style="font-size: 0.8rem; font-weight: 500;">{{ dt.name }}</span>
+                                    {% if dt.requirements %}<span style="font-size: 0.7rem; color: var(--text-tertiary); display: block; max-width: 280px; word-wrap: break-word;">{{ dt.requirements }}</span>{% endif %}
+                                    {% if dt.admin_file %}
+                                        <span class="badge badge-success" style="font-size: 0.6rem; padding: 0.1rem 0.4rem; margin-top: 0.15rem; display: inline-block;">Has File</span>
+                                    {% endif %}
+                                </div>
+                                <div class="flex gap-xs">
+                                    <button type="button" class="btn btn-ghost" onclick="document.getElementById('edit-dt-{{ dt.id }}').style.display = document.getElementById('edit-dt-{{ dt.id }}').style.display === 'none' ? 'block' : 'none';" style="font-size: 0.65rem; padding: 0.15rem 0.4rem; color: var(--accent-color);">Edit</button>
+                                    <form action="{% url 'delete_deliverable_template' dt.id %}" method="post">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-ghost" style="font-size: 0.65rem; padding: 0.15rem 0.4rem; color: var(--danger-color);">Remove</button>
+                                    </form>
+                                </div>
+                            </li>
+                            <!-- Edit Deliverable Toggle -->
+                            <li id="edit-dt-{{ dt.id }}" style="display: none; background: var(--subtle-overlay); padding: 8px; border-radius: var(--radius-sm); margin-bottom: 4px;">
+                                <form action="{% url 'edit_deliverable_template' dt.id %}" method="post" enctype="multipart/form-data" class="flex flex-col gap-xs">
+                                    {% csrf_token %}
+                                    <div class="flex items-center gap-xs">
+                                        <input type="text" name="name" value="{{ dt.name }}" class="form-control" style="font-size:0.75rem; padding: 0.3rem 0.5rem; flex: 1;" required>
+                                        <input type="text" name="requirements" value="{{ dt.requirements|default:'' }}" class="form-control" style="font-size:0.75rem; padding: 0.3rem 0.5rem; flex: 2;">
+                                    </div>
+                                    <div class="flex items-center gap-xs justify-between">
+                                        <input type="file" name="admin_file" class="form-control" style="font-size:0.7rem; padding: 0.15rem; flex: 1;">
+                                        <button type="submit" class="btn btn-primary" style="font-size: 0.7rem; padding: 0.3rem 0.75rem;">Save</button>
+                                    </div>
+                                </form>
+                            </li>
+                            {% endfor %}
+                        </ul>
+
+                        <!-- Add Deliverable Form -->
+                        <form action="{% url 'add_deliverable_template' %}" method="post" enctype="multipart/form-data"
+                            class="flex items-center gap-xs">
+                            {% csrf_token %}
+                            <input type="hidden" name="milestone_template_id" value="{{ template.id }}">
+                            <input type="text" name="requirements" class="form-control"
+                                style="font-size: 0.75rem; padding: 0.25rem 0.5rem; flex: 2;"
+                                placeholder="Requirements...">
+                            <input type="file" name="admin_file" class="form-control"
+                                style="font-size: 0.7rem; padding: 0.15rem 0.5rem; flex: 1;">
+                            <button type="submit" class="btn btn-primary"
+                                style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">+ Add</button>
+                        </form>
+                    </div>
+                </div>
+                {% empty %}
+                <p style="font-size: 0.8rem; color: var(--text-tertiary); font-style: italic;">No global templates defined yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Styles for forms matching the theme -->
+<style>
+    /* Styling for the django generated form inputs */
+    input[type="text"],
+    input[type="password"],
+    input[type="number"],
+    input[type="email"],
+    select.form-control {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        background-color: var(--background-color);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        color: var(--text-color);
+        font-family: inherit;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    input[type="number"]:focus,
+    input[type="email"]:focus,
+    select.form-control:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+    }
+</style>
+{% endblock %}

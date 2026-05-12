@@ -1,0 +1,1884 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ milestone.title }} - {{ startup.name }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Modal / Timeline container */
+    .timeline-container {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--border-color);
+        border-radius: 18px;
+        padding: 36px 28px;
+        position: relative;
+        min-height: 520px;
+        color: var(--text-primary);
+        box-shadow: var(--glass-shadow);
+    }
+
+    .timeline-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 28px;
+    }
+
+    .timeline-header h1 {
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin: 0;
+        color: var(--text-primary);
+    }
+
+    .close-btn {
+        background: var(--subtle-overlay);
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        color: var(--text-secondary);
+        padding: 6px;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        transition: background 0.2s;
+    }
+
+    .close-btn:hover {
+        background: var(--border-color);
+        color: var(--text-primary);
+    }
+
+    /* Timeline center line */
+    .timeline {
+        position: relative;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 10px 0 40px 0;
+    }
+
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 4px;
+        height: 100%;
+        background: var(--border-color);
+        top: 0;
+        border-radius: 4px;
+    }
+
+    .timeline-item {
+        margin-bottom: 36px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        min-height: 80px;
+    }
+
+    /* Content boxes alternate left/right */
+    .timeline-item:nth-child(odd) .timeline-content {
+        margin-left: 0;
+        margin-right: auto;
+        width: calc(50% - 60px);
+        text-align: right;
+    }
+
+    .timeline-item:nth-child(even) .timeline-content {
+        margin-left: auto;
+        margin-right: 0;
+        width: calc(50% - 60px);
+        text-align: left;
+    }
+
+    /* Dot with icon */
+    .timeline-dot {
+        position: absolute;
+        left: 50%;
+        top: 10px;
+        transform: translateX(-50%);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--glass-bg);
+        color: var(--text-secondary);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        border: 2px solid var(--border-color);
+        z-index: 12;
+        font-weight: 700;
+        font-size: 14px;
+    }
+
+    .timeline-dot.completed {
+        background: var(--success-color);
+        border-color: var(--success-color);
+        color: #fff;
+    }
+
+    .timeline-dot.pending {
+        background: var(--warning-color);
+        border-color: var(--warning-color);
+        color: #222;
+    }
+
+    .timeline-dot.rejected {
+        background: var(--danger-color);
+        border-color: var(--danger-color);
+        color: #fff;
+    }
+
+    .timeline-dot.not-started {
+        background: var(--glass-bg);
+        color: var(--text-tertiary);
+    }
+
+    /* Card style */
+    .timeline-content {
+        background: var(--glass-bg);
+        backdrop-filter: blur(8px);
+        color: var(--text-primary);
+        padding: 16px 18px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--glass-shadow);
+        min-height: 64px;
+        display: inline-block;
+        transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .timeline-content:hover {
+        border-color: var(--accent-color);
+        transform: translateY(-2px);
+    }
+
+    .timeline-date {
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+        font-size: 0.85rem;
+    }
+
+    .timeline-name {
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        margin: 0;
+    }
+
+    .add-deliverable-btn {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 12px;
+        background: var(--accent-color);
+        border: none;
+        border-radius: 50%;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 26px;
+        color: #fff;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+        transition: transform 0.2s;
+    }
+
+    .add-deliverable-btn:hover {
+        transform: translateX(-50%) scale(1.1);
+    }
+
+    .add-deliverable-text {
+        text-align: center;
+        color: var(--text-tertiary);
+        margin-top: 56px;
+        font-weight: 700;
+    }
+
+    @media (max-width: 900px) {
+
+        .timeline-item:nth-child(odd) .timeline-content,
+        .timeline-item:nth-child(even) .timeline-content {
+            width: calc(100% - 80px);
+        }
+
+        .timeline::before {
+            left: 20px;
+        }
+
+        .timeline-dot {
+            left: 20px;
+            transform: translateX(0);
+        }
+    }
+</style>
+
+<div class="mb-lg">
+    <a href="{% url 'view_startup' startup.id %}" class="text-accent hover:underline flex items-center gap-sm">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+        </svg>
+        Back to {{ startup.name }}
+    </a>
+</div>
+
+{% if is_locked %}
+<div class="glass-card bg-warning border-accent mb-lg">
+    <div class="flex items-center gap-md">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <div>
+            <p class="font-semibold text-accent">This milestone is locked</p>
+            <p class="text-sm text-muted">You can only view this content. Complete the previous milestone to make
+                changes.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="timeline-container">
+    <div class="timeline-header">
+        <h1>{{ milestone.title }}</h1>
+        <button class="close-btn" onclick="window.history.back()">✕</button>
+    </div>
+
+    <!-- Milestone Progress Bar -->
+    <div style="margin-bottom: 40px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Milestone Progress</span>
+            <span style="font-size: 0.85rem; font-weight: bold; color: var(--text-primary);">{{ milestone.progress_percentage }}%</span>
+        </div>
+        <div style="width: 100%; height: 10px; background: var(--border-color); border-radius: 6px; overflow: hidden;">
+            <div style="height: 100%; width: {{ milestone.progress_percentage }}%; background: linear-gradient(90deg, var(--accent-color), var(--brand-teal)); border-radius: 6px; transition: width 1s ease-in-out;"></div>
+        </div>
+    </div>
+
+    <div class="timeline">
+        <div class="timeline">
+            {% for d in deliverables_data %}
+            <div class="timeline-item" data-id="{{ d.obj.id }}" data-name="{{ d.obj.name }}"
+                data-status="{{ d.obj.status }}" data-reqs="{{ d.obj.requirements|escapejs }}"
+                data-due="{{ d.obj.due_date|date:'Y-m-d'|default:'' }}" data-admin-files="{{ d.admin_files_json }}"
+                data-incubatee-files="{{ d.incubatee_files_json }}" data-rls="{{ d.rls_json }}"
+                data-global-template="{{ d.global_template_file_json }}"
+                data-comments="{{ d.comments_json }}" onclick="window.location.href='{% url 'edit_deliverable_page' d.obj.id %}'"
+                style="cursor: pointer;">
+                <div
+                    class="timeline-dot {% if d.obj.status == 'approved' %}completed{% elif d.obj.status == 'submitted' %}pending{% elif d.obj.status == 'rejected' %}rejected{% else %}not-started{% endif %}">
+                    {% if d.obj.status == 'approved' %}
+                    ✓
+                    {% elif d.obj.status == 'submitted' %}
+                    ⊙
+                    {% elif d.obj.status == 'rejected' %}
+                    ✕
+                    {% else %}
+                    ○
+                    {% endif %}
+                </div>
+                <div class="timeline-content">
+                    <div class="timeline-date">
+                        {% if d.obj.due_date %}
+                        {{ d.obj.due_date|date:"M d, Y" }}
+                        {% else %}
+                        No Due Date
+                        {% endif %}
+                    </div>
+                    <p class="timeline-name">• {{ d.obj.name }}</p>
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+    </div>
+
+    <!-- Deliverable Modal -->
+    <div id="deliverableModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <form id="deliverableDetailsForm" method="post" action="">
+                {% csrf_token %}
+                <input type="hidden" name="action" id="modalActionInput" value="save">
+
+                <div class="modal-header">
+                    <h2 id="modalTitle">Edit Deliverable</h2>
+                    <button type="button" class="modal-close" onclick="closeDeliverableModal()">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="modal-grid">
+                        <!-- Left Column -->
+                        <div class="modal-column">
+                            <!-- Admin Files Section (files attached by admins/super_admins) -->
+                            <div class="modal-section">
+                                <div class="file-box admin" id="adminFileBox">
+                                    <div id="adminFileLink">📄 No startup-specific Admin File attached</div>
+
+                                    {% if user.role == 'admin' or user.role == 'super_admin' %}
+                                    <div id="adminUploadWrapper" style="margin-top:10px;">
+                                        {% csrf_token %}
+                                        <input type="file" name="file" id="adminFileInput" form="adminUploadForm"
+                                            style="display: none;"
+                                            onchange="uploadFilesAsync(event, document.getElementById('adminUploadForm'), 'admin', this);"
+                                            multiple>
+                                        <label for="adminFileInput" class="btn btn-small"
+                                            style="cursor: pointer; display: inline-block;">
+                                            Upload (Admin)
+                                        </label>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div id="globalTemplateFileContainer" style="display: none; margin-top: 10px;"></div>
+                            </div>
+
+                            <!-- Readiness Levels -->
+                            <div class="modal-section">
+                                <h3>Readiness Levels</h3>
+                                <div class="readiness-grid">
+
+                                    <!-- TRL -->
+                                    <div>
+                                        <label style="display: flex; align-items: center; gap: 8px; font-weight: bold; cursor: pointer;">
+                                            {% if user.role == 'incubatee' %}
+                                            <input type="checkbox" id="trlCheckbox" onchange="toggleReadinessSelect(this, 'trlSelect')" disabled> TRL
+                                            {% else %}
+                                            <input type="checkbox" id="trlCheckbox" name="trl_checked" onchange="toggleReadinessSelect(this, 'trlSelect')"> TRL
+                                            {% endif %}
+                                        </label>
+                                        <div style="display: flex; gap: 10px; margin-top: 5px;">
+                                            <!-- Hidden select for form submission -->
+                                            <select id="trlSelect" name="trl_level" class="form-control rl-select" data-rl-type="TRL" style="display: none !important;" {% if user.role in "admin,super_admin" %}disabled{% endif %}>
+                                                <option>Incubatee Level</option>
+                                                {% for i in "123456789"|make_list %}<option value="Level {{ i }}">Level {{ i }}</option>{% endfor %}
+                                            </select>
+                                            <!-- Custom dropdown with hover tooltips -->
+                                            <div class="rl-custom-dropdown" id="trlDropdown" data-rl-type="TRL" data-target="trlSelect" data-placeholder="Incubatee Level" style="display: none;">
+                                                <div class="rl-dd-trigger" onclick="toggleRLDropdown(this)"><span class="rl-dd-label">Incubatee Level</span><span class="rl-dd-arrow">▾</span></div>
+                                                <div class="rl-dd-menu"></div>
+                                            </div>
+                                            <select id="trlAdminSelect" name="trl_admin_level" class="form-control rl-select" data-rl-type="TRL" style="display: none !important;" {% if user.role == 'incubatee' %}disabled{% endif %}>
+                                                <option>Admin Verdict</option>
+                                                {% for i in "123456789"|make_list %}<option value="Level {{ i }}">Level {{ i }}</option>{% endfor %}
+                                            </select>
+                                            <div class="rl-custom-dropdown" id="trlAdminDropdown" data-rl-type="TRL" data-target="trlAdminSelect" data-placeholder="Admin Verdict" style="display: none;">
+                                                <div class="rl-dd-trigger" onclick="toggleRLDropdown(this)"><span class="rl-dd-label">Admin Verdict</span><span class="rl-dd-arrow">▾</span></div>
+                                                <div class="rl-dd-menu"></div>
+                                            </div>
+                                        </div>
+                                        <div class="rl-info-card" id="trlInfoCard" style="display: none;"></div>
+                                    </div>
+
+                                    <!-- CRL -->
+                                    <div>
+                                        <label style="display: flex; align-items: center; gap: 8px; font-weight: bold; cursor: pointer;">
+                                            {% if user.role == 'incubatee' %}
+                                            <input type="checkbox" id="crlCheckbox" onchange="toggleReadinessSelect(this, 'crlSelect')" disabled> CRL
+                                            {% else %}
+                                            <input type="checkbox" id="crlCheckbox" name="crl_checked" onchange="toggleReadinessSelect(this, 'crlSelect')"> CRL
+                                            {% endif %}
+                                        </label>
+                                        <div style="display: flex; gap: 10px; margin-top: 5px;">
+                                            <select id="crlSelect" name="crl_level" class="form-control rl-select" data-rl-type="CRL" style="display: none !important;" {% if user.role in "admin,super_admin" %}disabled{% endif %}>
+                                                <option>Incubatee Level</option>
+                                                {% for i in "123456789"|make_list %}<option value="Level {{ i }}">Level {{ i }}</option>{% endfor %}
+                                            </select>
+                                            <div class="rl-custom-dropdown" id="crlDropdown" data-rl-type="CRL" data-target="crlSelect" data-placeholder="Incubatee Level" style="display: none;">
+                                                <div class="rl-dd-trigger" onclick="toggleRLDropdown(this)"><span class="rl-dd-label">Incubatee Level</span><span class="rl-dd-arrow">▾</span></div>
+                                                <div class="rl-dd-menu"></div>
+                                            </div>
+                                            <select id="crlAdminSelect" name="crl_admin_level" class="form-control rl-select" data-rl-type="CRL" style="display: none !important;" {% if user.role == 'incubatee' %}disabled{% endif %}>
+                                                <option>Admin Verdict</option>
+                                                {% for i in "123456789"|make_list %}<option value="Level {{ i }}">Level {{ i }}</option>{% endfor %}
+                                            </select>
+                                            <div class="rl-custom-dropdown" id="crlAdminDropdown" data-rl-type="CRL" data-target="crlAdminSelect" data-placeholder="Admin Verdict" style="display: none;">
+                                                <div class="rl-dd-trigger" onclick="toggleRLDropdown(this)"><span class="rl-dd-label">Admin Verdict</span><span class="rl-dd-arrow">▾</span></div>
+                                                <div class="rl-dd-menu"></div>
+                                            </div>
+                                        </div>
+                                        <div class="rl-info-card" id="crlInfoCard" style="display: none;"></div>
+                                    </div>
+
+                                    <!-- BRL -->
+                                    <div>
+                                        <label style="display: flex; align-items: center; gap: 8px; font-weight: bold; cursor: pointer;">
+                                            {% if user.role == 'incubatee' %}
+                                            <input type="checkbox" id="brlCheckbox" onchange="toggleReadinessSelect(this, 'brlSelect')" disabled> BRL
+                                            {% else %}
+                                            <input type="checkbox" id="brlCheckbox" name="brl_checked" onchange="toggleReadinessSelect(this, 'brlSelect')"> BRL
+                                            {% endif %}
+                                        </label>
+                                        <div style="display: flex; gap: 10px; margin-top: 5px;">
+                                            <select id="brlSelect" name="brl_level" class="form-control rl-select" data-rl-type="BRL" style="display: none !important;" {% if user.role in "admin,super_admin" %}disabled{% endif %}>
+                                                <option>Incubatee Level</option>
+                                                {% for i in "123456789"|make_list %}<option value="Level {{ i }}">Level {{ i }}</option>{% endfor %}
+                                            </select>
+                                            <div class="rl-custom-dropdown" id="brlDropdown" data-rl-type="BRL" data-target="brlSelect" data-placeholder="Incubatee Level" style="display: none;">
+                                                <div class="rl-dd-trigger" onclick="toggleRLDropdown(this)"><span class="rl-dd-label">Incubatee Level</span><span class="rl-dd-arrow">▾</span></div>
+                                                <div class="rl-dd-menu"></div>
+                                            </div>
+                                            <select id="brlAdminSelect" name="brl_admin_level" class="form-control rl-select" data-rl-type="BRL" style="display: none !important;" {% if user.role == 'incubatee' %}disabled{% endif %}>
+                                                <option>Admin Verdict</option>
+                                                {% for i in "123456789"|make_list %}<option value="Level {{ i }}">Level {{ i }}</option>{% endfor %}
+                                            </select>
+                                            <div class="rl-custom-dropdown" id="brlAdminDropdown" data-rl-type="BRL" data-target="brlAdminSelect" data-placeholder="Admin Verdict" style="display: none;">
+                                                <div class="rl-dd-trigger" onclick="toggleRLDropdown(this)"><span class="rl-dd-label">Admin Verdict</span><span class="rl-dd-arrow">▾</span></div>
+                                                <div class="rl-dd-menu"></div>
+                                            </div>
+                                        </div>
+                                        <div class="rl-info-card" id="brlInfoCard" style="display: none;"></div>
+                                    </div>
+
+                                    <!-- FRL -->
+                                    <div>
+                                        <label style="display: flex; align-items: center; gap: 8px; font-weight: bold; cursor: pointer;">
+                                            {% if user.role == 'incubatee' %}
+                                            <input type="checkbox" id="frlCheckbox" onchange="toggleReadinessSelect(this, 'frlSelect')" disabled> FRL
+                                            {% else %}
+                                            <input type="checkbox" id="frlCheckbox" name="frl_checked" onchange="toggleReadinessSelect(this, 'frlSelect')"> FRL
+                                            {% endif %}
+                                        </label>
+                                        <div style="display: flex; gap: 10px; margin-top: 5px;">
+                                            <select id="frlSelect" name="frl_level" class="form-control rl-select" data-rl-type="FRL" style="display: none !important;" {% if user.role in "admin,super_admin" %}disabled{% endif %}>
+                                                <option>Incubatee Level</option>
+                                                {% for i in "123456789"|make_list %}<option value="Level {{ i }}">Level {{ i }}</option>{% endfor %}
+                                            </select>
+                                            <div class="rl-custom-dropdown" id="frlDropdown" data-rl-type="FRL" data-target="frlSelect" data-placeholder="Incubatee Level" style="display: none;">
+                                                <div class="rl-dd-trigger" onclick="toggleRLDropdown(this)"><span class="rl-dd-label">Incubatee Level</span><span class="rl-dd-arrow">▾</span></div>
+                                                <div class="rl-dd-menu"></div>
+                                            </div>
+                                            <select id="frlAdminSelect" name="frl_admin_level" class="form-control rl-select" data-rl-type="FRL" style="display: none !important;" {% if user.role == 'incubatee' %}disabled{% endif %}>
+                                                <option>Admin Verdict</option>
+                                                {% for i in "123456789"|make_list %}<option value="Level {{ i }}">Level {{ i }}</option>{% endfor %}
+                                            </select>
+                                            <div class="rl-custom-dropdown" id="frlAdminDropdown" data-rl-type="FRL" data-target="frlAdminSelect" data-placeholder="Admin Verdict" style="display: none;">
+                                                <div class="rl-dd-trigger" onclick="toggleRLDropdown(this)"><span class="rl-dd-label">Admin Verdict</span><span class="rl-dd-arrow">▾</span></div>
+                                                <div class="rl-dd-menu"></div>
+                                            </div>
+                                        </div>
+                                        <div class="rl-info-card" id="frlInfoCard" style="display: none;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Comments -->
+                            <div class="modal-section fb-comments-section">
+                                <div class="fb-comment-header">Comments</div>
+                                <div id="commentsList" class="fb-comments-list">
+                                    <!-- Comments will be injected here via JS -->
+                                </div>
+                                <div class="fb-comment-box">
+                                    <div class="fb-avatar">👤</div>
+                                    <div class="fb-input-wrapper">
+                                        <textarea class="fb-textarea" name="comment" placeholder="Write a comment..."
+                                            rows="1"
+                                            oninput="this.style.height = '';this.style.height = this.scrollHeight + 'px'"></textarea>
+                                        <button type="submit" class="fb-send-btn" title="Send Comment"
+                                            onclick="document.getElementById('modalActionInput').value='save';">
+                                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column -->
+                        <div class="modal-column">
+                            <!-- Incubatee Attached File -->
+                            <div class="modal-section">
+                                <div class="file-box incubatee" id="incubateeFileBox">
+                                    <div id="incubateeFileLink">📎 No File Submitted</div>
+
+                                    {% if user.role == 'incubatee' %}
+                                    <div id="incubateeUploadWrapper" style="margin-top:10px;">
+                                        {% csrf_token %}
+                                        <!-- Hidden file input that auto-submits on file selection -->
+                                        <input type="file" name="file" id="incubateeFileInput"
+                                            form="incubateeUploadForm" style="display: none;"
+                                            onchange="uploadFilesAsync(event, this.form, 'incubatee', this);" multiple>
+
+                                        <!-- Custom styled Upload button tied to the hidden input -->
+                                        <label for="incubateeFileInput" class="btn btn-small"
+                                            style="cursor: pointer; display: inline-block;">
+                                            Upload File
+                                        </label>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Due Date -->
+                            <div class="modal-section">
+                                <label>Due Date:</label>
+                                {% if user.role == 'incubatee' %}
+                                <input type="date" id="dueDate" class="form-control" placeholder="mm/dd/yyyy" disabled>
+                                {% else %}
+                                <input type="date" id="dueDate" name="due_date" class="form-control"
+                                    placeholder="mm/dd/yyyy">
+                                {% endif %}
+                            </div>
+
+                            <!-- Requirements -->
+                            <div class="modal-section">
+                                <label>Requirements:</label>
+                                {% if user.role == 'incubatee' %}
+                                <textarea id="requirements" class="form-control" placeholder="Enter requirements..."
+                                    rows="5" disabled></textarea>
+                                {% else %}
+                                <textarea id="requirements" name="requirements" class="form-control"
+                                    placeholder="Enter requirements..." rows="5"></textarea>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer" id="modalActions">
+                    <button type="submit" class="btn-done" id="btnSaveOnly"
+                        onclick="document.getElementById('modalActionInput').value='save';"
+                        style="display: none;">Done</button>
+                    <button type="submit" class="btn-revision" id="btnRevision"
+                        onclick="document.getElementById('modalActionInput').value='revision';"
+                        style="display: none;">Ask
+                        for
+                        Revision</button>
+                    <button type="submit" class="btn-done" id="btnMarkDone"
+                        onclick="document.getElementById('modalActionInput').value='done';" style="display: none;">Mark
+                        as
+                        Done</button>
+                </div>
+            </form>
+
+            <!-- Hidden explicit forms for file uploads -->
+            <form id="incubateeUploadForm" method="post" enctype="multipart/form-data" style="display:none;">
+                {% csrf_token %}
+            </form>
+            <form id="adminUploadForm" method="post" enctype="multipart/form-data" style="display:none;">
+                {% csrf_token %}
+            </form>
+        </div>
+
+        <style>
+            .modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+            }
+
+            .modal-content {
+                background: var(--glass-bg);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border: var(--glass-border);
+                border-radius: 20px;
+                padding: 30px;
+                max-width: 900px;
+                width: 90%;
+                max-height: 90vh;
+                overflow-y: auto;
+                color: var(--text-primary);
+            }
+
+            .modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+            }
+
+            .modal-header h2 {
+                margin: 0;
+                font-size: 24px;
+                font-weight: bold;
+            }
+
+            .modal-close {
+                background: none;
+                border: none;
+                font-size: 28px;
+                cursor: pointer;
+                color: var(--text-primary);
+                padding: 0;
+                width: 30px;
+                height: 30px;
+            }
+
+            .modal-body {
+                margin-bottom: 20px;
+            }
+
+            .modal-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+
+            .modal-section {
+                margin-bottom: 20px;
+            }
+
+            .modal-section h3 {
+                margin: 0 0 10px 0;
+                font-size: 14px;
+            }
+
+            .modal-section label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: bold;
+                font-size: 14px;
+            }
+
+            .file-box {
+                padding: 20px;
+                border-radius: 10px;
+                text-align: center;
+                font-weight: bold;
+            }
+
+            .file-box.no-file {
+                background: var(--bg-secondary);
+                color: var(--text-secondary);
+            }
+
+            .file-box.attached {
+                background: var(--bg-secondary);
+                color: var(--text-secondary);
+            }
+
+            .readiness-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .readiness-grid div {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .readiness-grid label {
+                font-size: 12px;
+                margin-bottom: 5px;
+            }
+
+            .form-control {
+                padding: 8px 12px;
+                border: none;
+                border-radius: 5px;
+                font-size: 14px;
+            }
+
+            textarea.form-control {
+                font-family: inherit;
+                resize: vertical;
+            }
+
+            .modal-footer {
+                display: flex;
+                justify-content: center;
+                gap: 20px;
+                padding-top: 20px;
+                border-top: 2px solid var(--border-color);
+            }
+
+            .btn-revision {
+                background: var(--warning-color);
+                color: #111;
+                border: none;
+                padding: 12px 30px;
+                border-radius: 25px;
+                font-weight: bold;
+                font-size: 14px;
+                cursor: pointer;
+                transition: all 0.3s;
+            }
+
+            .btn-revision:hover {
+                background: var(--warning-color);
+                filter: brightness(1.1);
+                transform: scale(1.05);
+            }
+
+            .btn-done {
+                background: var(--success-color);
+                color: #fff;
+                border: none;
+                padding: 12px 30px;
+                border-radius: 25px;
+                font-weight: bold;
+                font-size: 14px;
+                cursor: pointer;
+                transition: all 0.3s;
+            }
+
+            .btn-done:hover {
+                background: var(--success-color);
+                filter: brightness(1.1);
+                transform: scale(1.05);
+            }
+
+            .fb-comments-section {
+                background: var(--bg-secondary);
+                border-radius: 12px;
+                padding: 16px;
+                box-shadow: var(--glass-shadow);
+                color: var(--text-primary);
+                max-height: 400px;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .fb-comment-header {
+                font-size: 15px;
+                font-weight: 600;
+                margin-bottom: 12px;
+                flex-shrink: 0;
+            }
+
+            .fb-comments-list {
+                flex-grow: 1;
+                overflow-y: auto;
+                margin-bottom: 12px;
+                padding-right: 8px;
+                /* For scrollbar breathing room */
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            /* Facebook bubble styling for individual comments */
+            .fb-comment-item {
+                display: flex;
+                gap: 8px;
+                align-items: flex-start;
+            }
+
+            .fb-comment-avatar {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: var(--subtle-overlay);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 16px;
+                flex-shrink: 0;
+            }
+
+            .fb-comment-content {
+                background: var(--subtle-overlay);
+                border-radius: 18px;
+                padding: 8px 12px;
+                max-width: 100%;
+                word-wrap: break-word;
+            }
+
+            .fb-comment-author {
+                font-weight: 600;
+                font-size: 13px;
+                color: var(--text-primary);
+                margin-bottom: 2px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .fb-comment-date {
+                font-size: 11px;
+                color: var(--text-tertiary);
+                font-weight: normal;
+            }
+
+            .fb-comment-text {
+                font-size: 15px;
+                color: var(--text-primary);
+                line-height: 1.3333;
+                white-space: pre-wrap;
+                /* Keeps linebreaks from textarea */
+            }
+
+            .fb-comment-box {
+                display: flex;
+                gap: 8px;
+                align-items: flex-start;
+            }
+
+            .fb-avatar {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: #e4e6eb;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 16px;
+                flex-shrink: 0;
+            }
+
+            .fb-input-wrapper {
+                flex-grow: 1;
+                background: var(--subtle-overlay);
+                border-radius: 18px;
+                padding: 8px 12px;
+                display: flex;
+                align-items: center;
+            }
+
+            .fb-textarea {
+                width: 100%;
+                background: transparent;
+                border: none;
+                resize: none;
+                outline: none;
+                font-family: inherit;
+                font-size: 15px;
+                color: var(--text-primary);
+                margin: 0;
+                padding: 0;
+                line-height: 20px;
+                overflow-y: hidden;
+            }
+
+            .fb-textarea::placeholder {
+                color: var(--text-tertiary);
+            }
+
+            .fb-send-btn {
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 4px;
+                border-radius: 50%;
+                color: var(--text-secondary);
+                /* Default deactivated color */
+                transition: color 0.2s, background-color 0.2s;
+                margin-left: 4px;
+            }
+
+            /* The SVGs inside the send button */
+            .fb-send-btn svg {
+                width: 20px;
+                height: 20px;
+                transform: rotate(-15deg);
+                margin-right: -2px;
+                /* Visual centering adjustment for the paper airplane */
+            }
+
+            /* Make it look active/blue when hovering or when there is text */
+            .fb-input-wrapper:has(.fb-textarea:not(:placeholder-shown)) .fb-send-btn {
+                color: var(--accent-color);
+            }
+
+            .fb-send-btn:hover {
+                background: var(--subtle-overlay);
+                color: var(--accent-color);
+            }
+
+            /* Readiness Level Info Card */
+            .rl-info-card {
+                margin-top: 8px;
+                padding: 12px 14px;
+                background: var(--subtle-overlay);
+                border: 1px solid var(--border-color);
+                border-left: 3px solid var(--accent-color);
+                border-radius: 8px;
+                font-size: 12px;
+                line-height: 1.5;
+                color: var(--text-primary);
+                animation: rlCardSlideIn 0.25s ease-out;
+                max-height: 200px;
+                overflow-y: auto;
+            }
+
+            .rl-info-card .rl-info-indicator {
+                font-weight: 700;
+                color: var(--accent-color);
+                margin-bottom: 6px;
+                font-size: 11.5px;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+            }
+
+            .rl-info-card .rl-info-desc {
+                color: var(--text-secondary);
+                font-size: 11.5px;
+                white-space: pre-line;
+            }
+
+            .rl-info-card .rl-info-level-badge {
+                display: inline-block;
+                background: var(--accent-color);
+                color: #fff;
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 10px;
+                font-weight: 700;
+                margin-bottom: 8px;
+                letter-spacing: 0.5px;
+            }
+
+            @keyframes rlCardSlideIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-6px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            /* ===== Custom RL Dropdown with Hover Tooltips ===== */
+            .rl-custom-dropdown {
+                position: relative;
+                flex: 1;
+                min-width: 0;
+            }
+            .rl-dd-trigger {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px 12px;
+                background: rgba(0, 0, 0, 0.2);
+                border: 1px solid var(--border-color);
+                border-radius: 5px;
+                font-size: 13px;
+                color: var(--text-primary);
+                cursor: pointer;
+                transition: border-color 0.2s, box-shadow 0.2s;
+                user-select: none;
+                min-height: 36px;
+            }
+            body.light-mode .rl-dd-trigger { background: #fff; border-color: #cbd5e1; }
+            .rl-dd-trigger:hover { border-color: var(--accent-color); }
+            .rl-dd-trigger.open { border-color: var(--accent-color); box-shadow: 0 0 0 2px rgba(41,145,239,0.15); }
+            .rl-dd-trigger.disabled { opacity: 0.55; pointer-events: none; cursor: default; }
+            .rl-dd-arrow { font-size: 11px; color: var(--text-tertiary); transition: transform 0.2s; }
+            .rl-dd-trigger.open .rl-dd-arrow { transform: rotate(180deg); }
+            .rl-dd-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+            .rl-dd-menu {
+                display: none;
+                position: absolute;
+                top: calc(100% + 4px);
+                left: 0;
+                right: 0;
+                background: var(--bg-secondary);
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                box-shadow: 0 12px 36px rgba(0,0,0,0.3);
+                z-index: 200;
+                max-height: 280px;
+                overflow-y: auto;
+                padding: 4px;
+                animation: rlMenuSlideIn 0.15s ease-out;
+            }
+            body.light-mode .rl-dd-menu { background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+            .rl-dd-menu.open { display: block; }
+
+            @keyframes rlMenuSlideIn {
+                from { opacity: 0; transform: translateY(-4px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            .rl-dd-option {
+                position: relative;
+                padding: 8px 12px;
+                font-size: 13px;
+                color: var(--text-primary);
+                border-radius: 6px;
+                cursor: pointer;
+                transition: background 0.12s;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .rl-dd-option:hover { background: rgba(41,145,239,0.12); }
+            .rl-dd-option.selected { background: rgba(41,145,239,0.18); font-weight: 600; }
+            .rl-dd-option .rl-dd-opt-level { font-weight: 600; min-width: 52px; }
+            .rl-dd-option .rl-dd-opt-indicator {
+                font-size: 11px;
+                color: var(--text-secondary);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                flex: 1;
+            }
+
+            /* Hover Tooltip - appears to the right or left of the option */
+            .rl-dd-tooltip {
+                display: none;
+                position: fixed;
+                width: 320px;
+                max-height: 300px;
+                overflow-y: auto;
+                background: var(--bg-secondary);
+                border: 1px solid var(--border-color);
+                border-left: 3px solid var(--accent-color);
+                border-radius: 10px;
+                box-shadow: 0 16px 48px rgba(0,0,0,0.35);
+                padding: 14px 16px;
+                z-index: 300;
+                animation: rlTooltipFadeIn 0.18s ease-out;
+                pointer-events: none;
+            }
+            body.light-mode .rl-dd-tooltip {
+                background: #fff;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            }
+            .rl-dd-option:hover .rl-dd-tooltip { display: block; }
+
+            @keyframes rlTooltipFadeIn {
+                from { opacity: 0; transform: translateX(-4px); }
+                to { opacity: 1; transform: translateX(0); }
+            }
+
+            .rl-dd-tooltip .rl-tooltip-badge {
+                display: inline-block;
+                background: var(--accent-color);
+                color: #fff;
+                padding: 2px 10px;
+                border-radius: 10px;
+                font-size: 10px;
+                font-weight: 700;
+                margin-bottom: 8px;
+                letter-spacing: 0.5px;
+            }
+            .rl-dd-tooltip .rl-tooltip-indicator {
+                font-weight: 700;
+                color: var(--accent-color);
+                font-size: 11.5px;
+                margin-bottom: 6px;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+                line-height: 1.4;
+            }
+            .rl-dd-tooltip .rl-tooltip-desc {
+                color: var(--text-secondary);
+                font-size: 11.5px;
+                line-height: 1.55;
+                white-space: pre-line;
+            }
+
+            @media (max-width: 768px) {
+                .modal-grid {
+                    grid-template-columns: 1fr;
+                }
+                .rl-dd-tooltip {
+                    width: 240px;
+                    font-size: 11px;
+                }
+            }
+        </style>
+
+        <script>
+            // ===== Readiness Level Definitions (Indicators & Descriptions) =====
+            const RL_DATA = {
+                TRL: {
+                    1: {
+                        indicator: "Basic principles observed",
+                        description: "Published research that identifies the basic principles that underlie a technology.\nScientific research begins to be translated into more applied research and development."
+                    },
+                    2: {
+                        indicator: "Technology concept and/or application formulated",
+                        description: "The potential technology/product concept is defined and described.\nPractical applications can be defined/researched but are speculative and no proof or detailed analysis."
+                    },
+                    3: {
+                        indicator: "Analytical and experimental proof-of-concept of critical function and/or characteristics",
+                        description: "Active R&D is initiated to develop the technology/product further.\nAnalytical studies and laboratory-based or experimental studies are performed to physically validate that analytical predictions are correct."
+                    },
+                    4: {
+                        indicator: "Technology validation in laboratory",
+                        description: "Basic technological components are integrated to establish that they will work together.\nThis is relatively \u201Clow fidelity\u201D compared with the eventual system."
+                    },
+                    5: {
+                        indicator: "Technology validation in relevant environment",
+                        description: "Basic technological components integrated with reasonably realistic supporting elements so they can be tested in a simulated environment.\nFidelity of breadboard technology increases significantly."
+                    },
+                    6: {
+                        indicator: "Technology demonstration in a relevant environment",
+                        description: "Representative model or prototype system, tested in a relevant environment.\nRepresents a major step up and requires evidence of performance on full-scale, realistic problems."
+                    },
+                    7: {
+                        indicator: "Technology prototype demonstration in an operational environment",
+                        description: "Prototype near or at planned operational system.\nRequiring demonstration of an actual system prototype in an operational environment.\nCritical technological properties are measured against requirements."
+                    },
+                    8: {
+                        indicator: "Actual Technology system completed and qualified through test and demonstration",
+                        description: "Technology has been proven to work in its final form and under expected conditions.\nIn almost all cases, this TRL represents the end of true system development."
+                    },
+                    9: {
+                        indicator: "Actual Technology system proven in operational environment",
+                        description: "Actual application of the technology in its final form and under mission/operational conditions.\nTechnology is ready for commercial deployment."
+                    }
+                },
+                CRL: {
+                    1: {
+                        indicator: "Hypothesizing on possible needs in market",
+                        description: "Thinking that a possible need/problem or opportunity might exist in a market.\nNo clear hypotheses on who customers are and what problems are.\nLimited or non-existing knowledge of the market and customers/users."
+                    },
+                    2: {
+                        indicator: "Identified specific needs in market",
+                        description: "Some market research is performed, typically derived from secondary sources.\nBrief familiarity with the market, possible customers and their problems/needs.\nProduct/solution ideas may exist, but are not clear and typically speculative."
+                    },
+                    3: {
+                        indicator: "First market feedback established",
+                        description: "Initiated customer discovery with feedback from primary market research.\nA more developed understanding of possible customers and possible customer segments.\nA more clear problem hypothesis."
+                    },
+                    4: {
+                        indicator: "Confirmed problem/needs from several customers or users",
+                        description: "Contacts and feedback are established with several possible customers/users.\nThe problem and need (and its importance) is confirmed from multiple customers/users.\nCustomer segmentation in place, a primary product hypothesis is defined."
+                    },
+                    5: {
+                        indicator: "Established interest for product and relations with target customers",
+                        description: "General interest from customers/users for the product where the possible product/solution is confirmed to solve customers' problems.\nEstablished relationships with potential target customers, users or partners.\nDefined who the target customers/segments are to be focused on."
+                    },
+                    6: {
+                        indicator: "Benefits of the product confirmed through partnerships or first customer testing",
+                        description: "Testing of product by customers/users where the value and benefits of the product is confirmed.\nPartnerships formed with key stakeholders in value chain.\nInitiated structured business development/sales activities."
+                    },
+                    7: {
+                        indicator: "Customers in extended product testing or first test sales",
+                        description: "Customer agreements in place \u2013 first sales and/or test sales of product versions take place.\nCustomers and relevant stakeholders engaged in product qualifications/extended testing.\nRamp up of business development and sales efforts."
+                    },
+                    8: {
+                        indicator: "First products sold and increased structured sales efforts",
+                        description: "Customer qualifications are complete and initial products are sold to a few customers.\nPayment willingness confirmed from sufficient % of customers (product-market fit validated).\nThe real buyers/economic decision makers are identified."
+                    },
+                    9: {
+                        indicator: "Widespread product sales that scale",
+                        description: "Widespread product deployment, sales to several customers in a repeatable and scalable way.\nCustomer creation \u2013 company focuses on execution with growth of sales and efforts to build user/customer demand."
+                    }
+                },
+                BRL: {
+                    1: {
+                        indicator: "Hypothesizing on possible business concept. Little knowledge or insight into market and competition",
+                        description: "Vague and unspecific description of the potential business idea or business concept.\nLittle insight into the market and its potential/size.\nLittle knowledge or insight into competition and alternative solutions."
+                    },
+                    2: {
+                        indicator: "First possible business concept described (e.g. NABC). Identified overall market and some competitors/alternatives",
+                        description: "Described the proposed business concept in some structured form.\nOne or several markets or applications are identified and described on overall level.\nSome competitors and/or alternatives are identified and listed."
+                    },
+                    3: {
+                        indicator: "Draft of business model in canvas (excl. revenues/costs). Described market potential and complete competitive overview",
+                        description: "Draft of the business model in a canvas format (business model canvas/lean canvas) but typically without the revenues/cost parts.\nThe market potential and the market size is quantified with TAM and SAM.\nA more complete competitor overview with direct/indirect competitors."
+                    },
+                    4: {
+                        indicator: "First version of full business model in canvas (incl. revenues/costs). First projections to show economic viability",
+                        description: "There is a full business model in canvas format incl. details on possible revenues/costs.\nFirst economic projections with numbers to show the market potential and economic viability.\nMade a competitive analysis on your position and uniqueness/differentiation."
+                    },
+                    5: {
+                        indicator: "Parts of business model tested on market. First version of revenue model incl. pricing hypotheses",
+                        description: "The business model (at least parts of it) is tested against customers for verifying hypotheses.\nThere is a first version of a more detailed revenue model incl. pricing hypotheses.\nThe competitive position and differentiation is verified by market feedback."
+                    },
+                    6: {
+                        indicator: "Full business model incl. pricing verified on customers (by test sales)",
+                        description: "A complete business model incl. the pricing is tested vs. customers by test sales or similar.\nThe revenue model incl. pricing is updated and refined based on customer feedback.\nFirst more complete projections on revenue/costs."
+                    },
+                    7: {
+                        indicator: "Product/market fit and customers payment willingness demonstrated. Attractive revenue vs cost projections",
+                        description: "There is product/market fit meaning you can demonstrate significant customer interest and sales where customers show clear payment willingness.\nAttractive revenue vs cost projections being validated by sales and data.\nPreparations for scaling business with suppliers, sales channels."
+                    },
+                    8: {
+                        indicator: "Sales and metrics show business model holds and can scale. Business model is fine-tuned",
+                        description: "Sales and other metrics show the business model holds and is profitable.\nThe business model shows it can scale (potentially globally). Sales channels and supply chain are fully in place.\nBusiness model is set but is continuously fine-tuned to explore more revenue options."
+                    },
+                    9: {
+                        indicator: "Business model is final and is scaling with growing recurring revenues",
+                        description: "Business model is final and business is scaling with growing and recurring revenues.\nThe business scales by growing in new markets, new geographies, new segments.\nThere is a working business which is profitable and sustainable over time."
+                    }
+                },
+                FRL: {
+                    1: {
+                        indicator: "Initial business idea with vague description. No clear view on funding needs and options",
+                        description: "Initial business idea with unclear/poor description \u2013 no value proposition.\nNo insight into how much funding needed and for what.\nLittle insight into different funding options and funding types."
+                    },
+                    2: {
+                        indicator: "Description of business concept (e.g. NABC). Defined funding needs and options for initial milestones",
+                        description: "The business idea/business concept is reasonably well described incl. first version of value proposition.\nThe initial funding needs are mapped for initial key steps and milestones.\nThere is a basic plan with funding options for initial milestones (3-6 months)."
+                    },
+                    3: {
+                        indicator: "Well described business concept and initial verification plan. First small soft funding secured",
+                        description: "Well described business concept and initial verification plan (incl. hypothesis to verify, goals).\nBasic insight and knowledge of different financing options.\nObtained first small soft funding for commercial verification."
+                    },
+                    4: {
+                        indicator: "Good pitch and short presentation of the business in place. Plan with different funding options over time",
+                        description: "A succinct pitch (oral) and good written presentation of business concept is in place.\nThere is a more complete plan for funding needs/options over time (12-18 months).\nOverall budget and potential sources of funding."
+                    },
+                    5: {
+                        indicator: "Investor oriented presentation and supporting material tested. Applied for and secured additional larger funding",
+                        description: "There is an investor presentation (pitch deck) that has been tested and is being fine-tuned.\nSupporting material e.g. financial projections and budgets etc. are being developed.\nApplications for other types of funding e.g. grants or loans are prepared and filed."
+                    },
+                    6: {
+                        indicator: "Improved investor presentation incl. business/financials. Decided on seeking private investors",
+                        description: "There is an investor pitch deck that has been tested and fine-tuned which includes a focus on the business potential and financials.\nInsight into equity financing especially how investors think/evaluate.\nDecided to pursue equity funding and take in new owners."
+                    },
+                    7: {
+                        indicator: "Team presents a solid investment case. Discussions with potential investors on-going around an offer",
+                        description: "There is a team that can present well the investment case where key areas are in place such as prototype, traction/customer interest, market potential.\nThere is a complete business plan with financials and milestone plan.\nDiscussions with potential investors are on-going around a defined offer."
+                    },
+                    8: {
+                        indicator: "Corporate order and structure enabling investment. Term sheet discussions with interested investor(s)",
+                        description: "The company is reasonably structured e.g. in terms of agreements, ownership etc.\nThere is formal order in the company e.g. bookkeeping, documentation.\nClear interest and discussions on term sheet level with interested investor(s).\nAll necessary material often required by investors in place."
+                    },
+                    9: {
+                        indicator: "Investment obtained. Additional investment needs and options continuously considered",
+                        description: "Investment formally concluded with all relevant documentation and money obtained.\nAdditional future investment needs and options are continuously being considered for future."
+                    }
+                }
+            };
+
+            /**
+             * Shows the indicator and description info card below a readiness level select
+             * when the user selects a level from the dropdown.
+             */
+            function showRLInfo(selectEl) {
+                const rlType = selectEl.dataset.rlType; // e.g. 'TRL'
+                const val = selectEl.value; // e.g. 'Level 3'
+                const infoCardId = rlType.toLowerCase() + 'InfoCard';
+                const infoCard = document.getElementById(infoCardId);
+
+                if (!infoCard) return;
+
+                // Parse level number from value
+                const match = val.match(/Level\s+(\d+)/i);
+                if (!match) {
+                    infoCard.style.display = 'none';
+                    infoCard.innerHTML = '';
+                    return;
+                }
+
+                const levelNum = parseInt(match[1]);
+                const data = RL_DATA[rlType] && RL_DATA[rlType][levelNum];
+
+                if (!data) {
+                    infoCard.style.display = 'none';
+                    infoCard.innerHTML = '';
+                    return;
+                }
+
+                infoCard.innerHTML = `
+                    <div class="rl-info-level-badge">${rlType} Level ${levelNum}</div>
+                    <div class="rl-info-indicator">\u{1F3AF} ${data.indicator}</div>
+                    <div class="rl-info-desc">${data.description}</div>
+                `;
+                infoCard.style.display = 'block';
+            }
+
+            // ===== Custom Dropdown with Hover Tooltip Functions =====
+
+            /** Build menu items for a custom dropdown from RL_DATA */
+            function initRLDropdownMenu(dropdownEl) {
+                const rlType = dropdownEl.dataset.rlType;
+                const menu = dropdownEl.querySelector('.rl-dd-menu');
+                if (!menu || menu.children.length > 0) return; // already built
+
+                const data = RL_DATA[rlType];
+                if (!data) return;
+
+                for (let lvl = 1; lvl <= 9; lvl++) {
+                    const d = data[lvl];
+                    if (!d) continue;
+                    const opt = document.createElement('div');
+                    opt.className = 'rl-dd-option';
+                    opt.dataset.value = `Level ${lvl}`;
+
+                    // Truncate indicator to ~40 chars for inline preview
+                    const shortIndicator = d.indicator.length > 45 ? d.indicator.substring(0, 42) + '…' : d.indicator;
+
+                    opt.innerHTML = `
+                        <span class="rl-dd-opt-level">Lv ${lvl}</span>
+                        <span class="rl-dd-opt-indicator">${shortIndicator}</span>
+                        <div class="rl-dd-tooltip">
+                            <div class="rl-tooltip-badge">${rlType} Level ${lvl}</div>
+                            <div class="rl-tooltip-indicator">\u{1F3AF} ${d.indicator}</div>
+                            <div class="rl-tooltip-desc">${d.description}</div>
+                        </div>
+                    `;
+
+                    // Position tooltip on hover
+                    opt.addEventListener('mouseenter', function(e) {
+                        const tooltip = this.querySelector('.rl-dd-tooltip');
+                        if (!tooltip) return;
+                        const rect = this.getBoundingClientRect();
+                        const vw = window.innerWidth;
+
+                        // Try placing to the right; if not enough space, place to the left
+                        if (rect.right + 330 < vw) {
+                            tooltip.style.left = (rect.right + 8) + 'px';
+                        } else {
+                            tooltip.style.left = (rect.left - 328) + 'px';
+                        }
+                        tooltip.style.top = Math.max(8, rect.top - 20) + 'px';
+                    });
+
+                    // Click to select
+                    opt.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        selectRLOption(dropdownEl, this.dataset.value);
+                    });
+
+                    menu.appendChild(opt);
+                }
+            }
+
+            /** Toggle a custom dropdown open/closed */
+            function toggleRLDropdown(triggerEl) {
+                const dropdown = triggerEl.parentElement;
+                const menu = dropdown.querySelector('.rl-dd-menu');
+                const isOpen = menu.classList.contains('open');
+
+                // Close all other open menus first
+                document.querySelectorAll('.rl-dd-menu.open').forEach(m => {
+                    m.classList.remove('open');
+                    m.parentElement.querySelector('.rl-dd-trigger').classList.remove('open');
+                });
+
+                if (!isOpen) {
+                    initRLDropdownMenu(dropdown); // lazy-build
+                    menu.classList.add('open');
+                    triggerEl.classList.add('open');
+
+                    // Highlight the currently selected option
+                    const currentVal = dropdown.querySelector('.rl-dd-label').textContent;
+                    menu.querySelectorAll('.rl-dd-option').forEach(opt => {
+                        opt.classList.toggle('selected', opt.dataset.value === currentVal);
+                    });
+                }
+            }
+
+            /** Select an option in the custom dropdown */
+            function selectRLOption(dropdownEl, value) {
+                const label = dropdownEl.querySelector('.rl-dd-label');
+                const menu = dropdownEl.querySelector('.rl-dd-menu');
+                const trigger = dropdownEl.querySelector('.rl-dd-trigger');
+                const targetSelectId = dropdownEl.dataset.target;
+                const targetSelect = document.getElementById(targetSelectId);
+
+                label.textContent = value;
+                menu.classList.remove('open');
+                trigger.classList.remove('open');
+
+                // Sync hidden select
+                if (targetSelect) {
+                    targetSelect.value = value;
+                    // Fire change event for showRLInfo
+                    targetSelect.dispatchEvent(new Event('change'));
+                }
+
+                // Also trigger showRLInfo
+                showRLInfo(targetSelect);
+            }
+
+            /** Set the custom dropdown value without opening it */
+            function setRLDropdownValue(dropdownEl, value) {
+                const label = dropdownEl.querySelector('.rl-dd-label');
+                if (label) label.textContent = value || dropdownEl.dataset.placeholder;
+            }
+
+            /** Show/hide a custom dropdown */
+            function showRLDropdown(dropdownEl, show) {
+                dropdownEl.style.display = show ? 'block' : 'none';
+            }
+
+            /** Enable/disable a custom dropdown */
+            function setRLDropdownDisabled(dropdownEl, disabled) {
+                const trigger = dropdownEl.querySelector('.rl-dd-trigger');
+                if (disabled) {
+                    trigger.classList.add('disabled');
+                } else {
+                    trigger.classList.remove('disabled');
+                }
+            }
+
+            // Close dropdown menus when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.rl-custom-dropdown')) {
+                    document.querySelectorAll('.rl-dd-menu.open').forEach(m => {
+                        m.classList.remove('open');
+                        m.parentElement.querySelector('.rl-dd-trigger').classList.remove('open');
+                    });
+                }
+            });
+
+            function uploadFilesAsync(event, form, role, inputElement = null) {
+                if (event) event.preventDefault();
+
+                const formData = new FormData(form);
+                let label, origText, submitBtn;
+
+                if (role === 'incubatee' && inputElement) {
+                    if (!inputElement.files || inputElement.files.length === 0) return;
+                    label = inputElement.nextElementSibling;
+                    origText = label.textContent;
+                    label.textContent = 'Uploading...';
+                    label.style.pointerEvents = 'none';
+                    label.style.opacity = '0.7';
+                } else if (role === 'admin') {
+                    submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        origText = submitBtn.textContent;
+                        submitBtn.textContent = 'Uploading...';
+                        submitBtn.disabled = true;
+                    }
+                }
+
+                fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update the timeline item dataset so it persists if modal collapses
+                            const modal = document.getElementById('deliverableModal');
+                            const d_id = modal.dataset.deliverableId;
+                            const timelineItem = document.querySelector(`.timeline-item[data-id="${d_id}"]`);
+
+                            if (role === 'incubatee') {
+                                if (timelineItem) timelineItem.dataset.incubateeFiles = JSON.stringify(data.files);
+
+                                // Immediately update the DOM link list
+                                const linkEl = document.getElementById('incubateeFileLink');
+                                if (data.files.length > 0) {
+                                    let htmlBuilder = '<ul style="list-style-type: none; padding-left: 0; margin-bottom: 0;">';
+                                    data.files.forEach(f => {
+                                        htmlBuilder += `<li style="margin-bottom: 5px;"><a href="${f.url}" target="_blank" rel="noopener">📎 ${f.name}</a></li>`;
+                                    });
+                                    htmlBuilder += '</ul>';
+                                    linkEl.innerHTML = htmlBuilder;
+
+                                    if (label) Object.assign(label, { textContent: 'Upload More Files' });
+                                }
+                            } else if (role === 'admin') {
+                                if (timelineItem) timelineItem.dataset.adminFiles = JSON.stringify(data.files);
+
+                                const linkEl = document.getElementById('adminFileLink');
+                                if (data.files.length > 0) {
+                                    let htmlBuilder = '<ul style="list-style-type: none; padding-left: 0; margin-bottom: 0;">';
+                                    data.files.forEach(f => {
+                                        htmlBuilder += `<li style="margin-bottom: 5px;"><a href="${f.url}" target="_blank" rel="noopener">📄 ${f.name}</a></li>`;
+                                    });
+                                    htmlBuilder += '</ul>';
+                                    linkEl.innerHTML = htmlBuilder;
+                                }
+                                if (submitBtn) {
+                                    submitBtn.textContent = 'Uploaded!';
+                                    setTimeout(() => { submitBtn.textContent = origText; submitBtn.disabled = false; }, 2000);
+                                }
+                                // clear the file input for admin
+                                const adminInput = form.querySelector('input[type="file"]');
+                                if (adminInput) adminInput.value = '';
+                            }
+                        } else {
+                            throw new Error('Upload failed');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Upload error:', err);
+                        if (label) label.textContent = 'Error!';
+                        if (submitBtn) submitBtn.textContent = 'Error!';
+                    })
+                    .finally(() => {
+                        if (label) {
+                            label.style.pointerEvents = 'auto';
+                            label.style.opacity = '1';
+                            if (label.textContent === 'Error!') setTimeout(() => { label.textContent = 'Upload More Files'; }, 2000);
+                            if (inputElement) inputElement.value = ''; // clear input
+                        }
+                    });
+            }
+
+            function deleteFileAsync(fileId, role) {
+                if (!confirm("Are you sure you want to delete this file?")) return;
+                fetch(`/deliverables/files/${fileId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            const elList = document.querySelector(`li[data-file-id="${fileId}"]`);
+                            if (elList) elList.remove();
+                        } else {
+                            alert("Failed to delete file. You may not have permission.");
+                        }
+                    })
+                    .catch(err => console.error("Error deleting file:", err));
+            }
+
+            function toggleReadinessSelect(checkbox, selectId) {
+                const isIncubatee = "{{ user.role }}" === "incubatee";
+                const selectEl = document.getElementById(selectId);
+                const adminSelectEl = document.getElementById(selectId.replace('Select', 'AdminSelect'));
+                const rlType = selectEl ? selectEl.dataset.rlType : null;
+                const infoCard = rlType ? document.getElementById(rlType.toLowerCase() + 'InfoCard') : null;
+
+                // Custom dropdown elements
+                const ddId = rlType ? rlType.toLowerCase() + 'Dropdown' : null;
+                const adminDdId = rlType ? rlType.toLowerCase() + 'AdminDropdown' : null;
+                const customDD = ddId ? document.getElementById(ddId) : null;
+                const adminCustomDD = adminDdId ? document.getElementById(adminDdId) : null;
+
+                if (isIncubatee) {
+                    if (checkbox.checked) {
+                        if (customDD) showRLDropdown(customDD, true);
+                    } else {
+                        if (customDD) { showRLDropdown(customDD, false); setRLDropdownValue(customDD, 'Incubatee Level'); }
+                        selectEl.value = 'Incubatee Level';
+                        if (infoCard) { infoCard.style.display = 'none'; infoCard.innerHTML = ''; }
+                    }
+                } else {
+                    if (checkbox.checked) {
+                        if (customDD) showRLDropdown(customDD, true);
+                        var incVal = selectEl.value;
+                        if (incVal && incVal !== 'Incubatee Level') {
+                            if (adminCustomDD) showRLDropdown(adminCustomDD, true);
+                        } else {
+                            if (adminCustomDD) showRLDropdown(adminCustomDD, false);
+                        }
+                    } else {
+                        if (customDD) { showRLDropdown(customDD, false); setRLDropdownValue(customDD, 'Incubatee Level'); }
+                        selectEl.value = 'Incubatee Level';
+                        if (adminCustomDD) { showRLDropdown(adminCustomDD, false); setRLDropdownValue(adminCustomDD, 'Admin Verdict'); }
+                        if (adminSelectEl) adminSelectEl.value = 'Admin Verdict';
+                        if (infoCard) { infoCard.style.display = 'none'; infoCard.innerHTML = ''; }
+                    }
+                }
+            }
+
+            function openDeliverableModalFromData(el) {
+                const ds = el.dataset;
+                openDeliverableModal(
+                    ds.id,
+                    ds.name,
+                    ds.status,
+                    ds.reqs,
+                    ds.due,
+                    ds.adminFiles,
+                    ds.incubateeFiles,
+                    ds.rls,
+                    ds.comments,
+                    el
+                );
+            }
+
+            function openDeliverableModal(id, name, status, requirements, dueDate, adminFilesStr, uploadFilesStr, rls_str, comments_str, el) {
+                // Parse the JSON string for readiness levels
+                let rls = {};
+                if (rls_str) {
+                    try {
+                        rls = JSON.parse(rls_str);
+                    } catch (e) {
+                        console.error('Failed to parse rls JSON', e);
+                    }
+                }
+
+                // Parse the JSON string for comments
+                let comments = [];
+                if (comments_str) {
+                    try {
+                        comments = JSON.parse(comments_str);
+                    } catch (e) {
+                        console.error('Failed to parse comments JSON', e);
+                    }
+                }
+
+                // Parse JSON array for files
+                let adminFiles = [];
+                if (adminFilesStr) {
+                    try { adminFiles = JSON.parse(adminFilesStr); } catch (e) { }
+                }
+
+                let uploadFiles = [];
+                if (uploadFilesStr) {
+                    try { uploadFiles = JSON.parse(uploadFilesStr); } catch (e) { }
+                }
+                // Prepare Form Action
+                const formDetails = document.getElementById('deliverableDetailsForm');
+                formDetails.action = `/deliverables/${id}/update_details/`;
+
+                // Show modal and populate fields
+                document.getElementById('deliverableModal').style.display = 'flex';
+                document.getElementById('modalTitle').textContent = 'Edit - ' + name;
+                document.getElementById('requirements').value = requirements || '';
+                if (dueDate && dueDate !== 'None') {
+                    document.getElementById('dueDate').value = dueDate;
+                } else {
+                    document.getElementById('dueDate').value = '';
+                }
+
+                const modal = document.getElementById('deliverableModal');
+                modal.dataset.deliverableId = id;
+
+                // Handle Readiness Levels Population
+                const rlTypes = ['TRL', 'CRL', 'BRL', 'FRL'];
+                const isIncubatee = "{{ user.role }}" === "incubatee";
+
+                rlTypes.forEach(type => {
+                    const tl = type.toLowerCase();
+                    const checkbox = document.getElementById(tl + 'Checkbox');
+                    const select = document.getElementById(tl + 'Select');
+                    const infoCard = document.getElementById(tl + 'InfoCard');
+                    const customDD = document.getElementById(tl + 'Dropdown');
+                    const adminCustomDD = document.getElementById(tl + 'AdminDropdown');
+                    const adminSelect = document.getElementById(tl + 'AdminSelect');
+
+                    // Reset state
+                    checkbox.checked = false;
+                    select.value = 'Incubatee Level';
+                    if (infoCard) { infoCard.style.display = 'none'; infoCard.innerHTML = ''; }
+                    if (customDD) { showRLDropdown(customDD, false); setRLDropdownValue(customDD, 'Incubatee Level'); setRLDropdownDisabled(customDD, false); }
+                    if (adminCustomDD) { showRLDropdown(adminCustomDD, false); setRLDropdownValue(adminCustomDD, 'Admin Verdict'); setRLDropdownDisabled(adminCustomDD, false); }
+                    if (adminSelect) adminSelect.value = 'Admin Verdict';
+
+                    if (rls && rls[type] !== undefined) {
+                        checkbox.checked = true;
+
+                        let incLvl = (typeof rls[type] === 'object' && rls[type] !== null) ? rls[type].incubatee : rls[type];
+                        let admLvl = (typeof rls[type] === 'object' && rls[type] !== null) ? rls[type].admin : null;
+
+                        if (isIncubatee) {
+                            checkbox.parentElement.style.display = 'flex';
+                            checkbox.style.display = 'none';
+                            // Show incubatee custom dropdown (editable)
+                            select.value = incLvl || 'Incubatee Level';
+                            if (customDD) {
+                                showRLDropdown(customDD, true);
+                                setRLDropdownValue(customDD, incLvl || 'Incubatee Level');
+                                setRLDropdownDisabled(customDD, false);
+                            }
+                            // Show admin verdict (read-only)
+                            if (adminSelect) adminSelect.value = admLvl || 'Admin Verdict';
+                            if (adminCustomDD) {
+                                showRLDropdown(adminCustomDD, true);
+                                setRLDropdownValue(adminCustomDD, admLvl || 'Admin Verdict');
+                                setRLDropdownDisabled(adminCustomDD, true);
+                            }
+                        } else {
+                            checkbox.parentElement.style.display = 'flex';
+                            checkbox.style.display = 'inline-block';
+                            // Incubatee level (read-only for admin)
+                            select.value = incLvl || 'Incubatee Level';
+                            if (customDD) {
+                                showRLDropdown(customDD, true);
+                                setRLDropdownValue(customDD, incLvl || 'Incubatee Level');
+                                setRLDropdownDisabled(customDD, true);
+                            }
+                            // Admin verdict (editable, only if incubatee selected)
+                            if (incLvl && incLvl !== 'Incubatee Level') {
+                                if (adminSelect) adminSelect.value = admLvl || 'Admin Verdict';
+                                if (adminCustomDD) {
+                                    showRLDropdown(adminCustomDD, true);
+                                    setRLDropdownValue(adminCustomDD, admLvl || 'Admin Verdict');
+                                    setRLDropdownDisabled(adminCustomDD, false);
+                                }
+                            } else {
+                                if (adminCustomDD) showRLDropdown(adminCustomDD, false);
+                            }
+                        }
+
+                        // Auto-show the info card for the currently set level
+                        showRLInfo(select);
+                    } else {
+                        if (isIncubatee) {
+                            checkbox.parentElement.style.display = 'none';
+                        } else {
+                            checkbox.parentElement.style.display = 'flex';
+                            checkbox.style.display = 'inline-block';
+                            if (adminCustomDD) showRLDropdown(adminCustomDD, false);
+                        }
+                    }
+                });
+
+                // Populate Comments History
+                const commentsListEl = document.getElementById('commentsList');
+                commentsListEl.innerHTML = ''; // Clear previous
+
+                if (comments && comments.length > 0) {
+                    // Reverse the array so oldest comments appear at the top, like Facebook
+                    const reversedComments = [...comments].reverse();
+
+                    reversedComments.forEach(c => {
+                        const initChar = c.user.charAt(0).toUpperCase();
+                        const commentHtml = `
+                            <div class="fb-comment-item">
+                                <div class="fb-comment-avatar">${initChar}</div>
+                                <div class="fb-comment-content">
+                                    <div class="fb-comment-author">
+                                        <span>${c.user}</span>
+                                        <span class="fb-comment-date">${c.date}</span>
+                                    </div>
+                                    <div class="fb-comment-text">${c.content}</div>
+                                </div>
+                            </div>
+                        `;
+                        commentsListEl.insertAdjacentHTML('beforeend', commentHtml);
+                    });
+
+                    // Scroll to bottom so latest comment is visible
+                    setTimeout(() => {
+                        commentsListEl.scrollTop = commentsListEl.scrollHeight;
+                    }, 50);
+                } else {
+                    commentsListEl.innerHTML = `
+                        <div style="text-align: center; color: var(--text-tertiary); font-size: 14px; padding: 20px 0;">
+                            No comments yet. Be the first to start the conversation!
+                        </div>
+                    `;
+                }
+
+                // Global Template File Render
+                const globalTemplateRaw = el.getAttribute('data-global-template');
+                let globalTemplateData = null;
+                if (globalTemplateRaw && globalTemplateRaw !== "null" && globalTemplateRaw !== "None" && globalTemplateRaw.trim() !== "") {
+                    try {
+                        globalTemplateData = JSON.parse(globalTemplateRaw);
+                    } catch (e) {
+                        console.error("Failed to parse global template data", e, globalTemplateRaw);
+                    }
+                }
+                const globalTemplateContainer = document.getElementById('globalTemplateFileContainer');
+                
+                if (globalTemplateContainer) {
+                    // Injecting inside the blue adminFileBox directly to ensure it renders!
+                    const adminBox = document.getElementById('adminFileBox');
+                    if (globalTemplateData) {
+                        globalTemplateContainer.innerHTML = `
+                            <div style="background: var(--subtle-overlay); border: 1px solid var(--border-color); padding: 10px; border-radius: var(--radius-sm); color: var(--text-primary); margin-bottom: 15px;">
+                                <div style="display: inline-block; background: var(--accent-color); color: #fff; padding: 4px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Global Required Format</div>
+                                <a href="${globalTemplateData.url}" target="_blank" rel="noopener" style="word-break: break-all; color: var(--accent-color); font-weight: bold; text-decoration: none; display: flex; align-items: center; gap: 5px; font-size: 0.9rem;">
+                                    <span style="font-size: 1.2rem;">📄</span>
+                                    <span>${globalTemplateData.name}</span>
+                                </a>
+                            </div>
+                        `;
+                        adminBox.insertBefore(globalTemplateContainer, adminBox.firstChild);
+                        globalTemplateContainer.style.display = 'block';
+                    } else {
+                        globalTemplateContainer.innerHTML = '';
+                        globalTemplateContainer.style.display = 'none';
+                    }
+                }
+
+                // Admin file link
+                const adminLinkEl = document.getElementById('adminFileLink');
+                if (adminFiles && adminFiles.length > 0) {
+                    let htmlBuilder = '<ul style="list-style-type: none; padding-left: 0; margin-bottom: 0;">';
+                    adminFiles.forEach(f => {
+                        htmlBuilder += `<li data-file-id="${f.id}" style="margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
+                             <a href="${f.url}" target="_blank" rel="noopener" style="word-break: break-all; margin-right: 10px;">📄 ${f.name}</a>`;
+                        if ("{{ user.role }}" === "admin" || "{{ user.role }}" === "super_admin") {
+                            htmlBuilder += `<button type="button" onclick="deleteFileAsync(${f.id}, 'admin')" style="background: none; border: none; color: var(--danger-color); cursor: pointer; font-weight: bold; padding: 0 5px; font-size: 16px;" title="Delete File">&times;</button>`;
+                        }
+                        htmlBuilder += `</li>`;
+                    });
+                    htmlBuilder += '</ul>';
+                    adminLinkEl.innerHTML = htmlBuilder;
+                } else {
+                    adminLinkEl.textContent = '📄 No Admin File Attached';
+                }
+
+                // Incubatee file link and Actions visibility
+                const incubateeLinkEl = document.getElementById('incubateeFileLink');
+                const btnSaveOnly = document.getElementById('btnSaveOnly');
+                const btnRevision = document.getElementById('btnRevision');
+                const btnMarkDone = document.getElementById('btnMarkDone');
+                const incubateeUploadWrapper = document.getElementById('incubateeUploadWrapper');
+
+                if (uploadFiles && uploadFiles.length > 0) {
+                    let htmlBuilder = '<ul style="list-style-type: none; padding-left: 0; margin-bottom: 0;">';
+                    uploadFiles.forEach(f => {
+                        htmlBuilder += `<li data-file-id="${f.id}" style="margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
+                             <a href="${f.url}" target="_blank" rel="noopener" style="word-break: break-all; margin-right: 10px;">📎 ${f.name}</a>`;
+                        if ("{{ user.role }}" === "incubatee" || "{{ user.role }}" === "admin" || "{{ user.role }}" === "super_admin") {
+                            htmlBuilder += `<button type="button" onclick="deleteFileAsync(${f.id}, 'incubatee')" style="background: none; border: none; color: var(--danger-color); cursor: pointer; font-weight: bold; padding: 0 5px; font-size: 16px;" title="Delete File">&times;</button>`;
+                        }
+                        htmlBuilder += `</li>`;
+                    });
+                    htmlBuilder += '</ul>';
+                    incubateeLinkEl.innerHTML = htmlBuilder;
+                } else {
+                    incubateeLinkEl.textContent = '📎 No File Submitted';
+                }
+
+                if (isIncubatee) {
+                    btnSaveOnly.style.display = 'inline-block';
+                    btnSaveOnly.textContent = 'Submit';
+                    btnRevision.style.display = 'none';
+                    btnMarkDone.style.display = 'none';
+                    if (incubateeUploadWrapper) {
+                        incubateeUploadWrapper.style.display = 'block';
+                        const label = incubateeUploadWrapper.querySelector('label');
+                        if (label) label.textContent = uploadFiles && uploadFiles.length > 0 ? 'Upload More Files' : 'Upload File';
+                    }
+                } else {
+                    btnSaveOnly.style.display = 'none';
+                    btnRevision.style.display = 'inline-block';
+                    btnMarkDone.style.display = 'inline-block';
+                    if (incubateeUploadWrapper) {
+                        incubateeUploadWrapper.style.display = 'none';
+                    }
+                }
+
+                // Set form actions to include deliverable id
+                const adminForm = document.getElementById('adminUploadForm');
+                if (adminForm) {
+                    adminForm.action = `/deliverables/${id}/attach_admin/`;
+                }
+                const incForm = document.getElementById('incubateeUploadForm');
+                if (incForm) {
+                    incForm.action = `/deliverables/${id}/attach_incubatee/`;
+                }
+            }
+
+            function closeDeliverableModal() {
+                document.getElementById('deliverableModal').style.display = 'none';
+            }
+
+            // Close modal when clicking outside
+            document.addEventListener('click', function (event) {
+                const modal = document.getElementById('deliverableModal');
+                if (event.target === modal) {
+                    closeDeliverableModal();
+                }
+            });
+
+            // Auto-open deliverable modal if specified in URL
+            document.addEventListener('DOMContentLoaded', function () {
+                const params = new URLSearchParams(window.location.search);
+                const deliverableId = params.get('deliverable');
+                if (deliverableId) {
+                    const el = document.querySelector(`.timeline-item[data-id="${deliverableId}"]`);
+                    if (el) {
+                        openDeliverableModalFromData(el);
+                    }
+                }
+            });
+        </script>
+
+        {% endblock %}

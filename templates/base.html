@@ -1,0 +1,590 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incubator System | {% block title %}Dashboard{% endblock %}</title>
+    <script>
+        // FOUC Prevention — runs before any rendering
+        (function() {
+            if (localStorage.getItem('theme') === 'light') {
+                document.documentElement.classList.add('light-mode');
+            }
+            // Apply saved zoom level
+            var zoom = localStorage.getItem('uiZoom');
+            if (zoom) {
+                document.documentElement.style.fontSize = zoom + 'px';
+            }
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <link rel="icon" type="image/png" href="{% static 'favicon.png' %}">
+    <style>
+        /* ====== Sidebar Layout ====== */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 50;
+            overflow-y: auto;
+        }
+
+        .sidebar-profile {
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-color), var(--brand-teal));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: #ffffff;
+            margin: 0 auto 0.75rem;
+            text-transform: uppercase;
+            position: relative;
+        }
+
+        .sidebar-avatar::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 12px;
+            height: 12px;
+            background: var(--success-color);
+            border-radius: 50%;
+            border: 2px solid var(--bg-secondary);
+        }
+
+        .sidebar-username {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.15rem;
+        }
+
+        .sidebar-role {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            text-transform: capitalize;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 1rem 0;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 1.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-link:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        body.light-mode .sidebar-link:hover {
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        .sidebar-link.active {
+            color: var(--accent-color);
+            background: rgba(41, 145, 239, 0.08);
+            border-left-color: var(--accent-color);
+        }
+
+        .sidebar-link .sidebar-icon {
+            font-size: 1.1rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sidebar-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .sidebar-footer-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: color 0.15s;
+        }
+
+        .sidebar-footer-link:hover {
+            color: var(--text-primary);
+        }
+
+        .sidebar-footer-link.danger:hover {
+            color: var(--danger-color);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
+        }
+
+        /* Top Bar */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0.75rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            gap: 1rem;
+        }
+
+        .topbar .nav-icon {
+            position: relative;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 8px;
+            color: var(--text-secondary);
+            transition: color 0.15s;
+        }
+
+        .topbar .nav-icon:hover {
+            color: var(--text-primary);
+        }
+
+        .topbar .badge {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background-color: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            padding: 2px 5px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .notification-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            width: 320px;
+            background-color: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            z-index: 1000;
+            display: none;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 8px;
+        }
+
+        .notification-dropdown.show {
+            display: block;
+        }
+
+        .notification-header {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: block;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+
+        .notification-item:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .notification-item.unread {
+            background-color: rgba(41, 145, 239, 0.06);
+            border-left: 3px solid var(--accent-color);
+        }
+
+        .notification-time {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+            display: block;
+        }
+
+        .notification-empty {
+            padding: 20px;
+            text-align: center;
+            color: var(--text-tertiary);
+            font-size: 0.9rem;
+        }
+
+        .topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.35rem 0.75rem;
+            border-radius: var(--radius-md);
+            transition: background 0.15s;
+            position: relative;
+        }
+
+        .topbar-user:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        body.light-mode .topbar-user:hover {
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        .topbar-user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-color), var(--brand-teal));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: #ffffff;
+            text-transform: uppercase;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            width: 200px;
+            background-color: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            z-index: 1000;
+            display: none;
+            margin-top: 8px;
+        }
+
+        .user-dropdown.show {
+            display: block;
+        }
+
+        .user-dropdown-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            transition: background-color 0.15s;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border-left: none;
+            border-right: none;
+            border-top: none;
+        }
+
+        .user-dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-dropdown-item:hover {
+            background-color: rgba(255, 255, 255, 0.04);
+        }
+
+        body.light-mode .user-dropdown-item:hover {
+            background-color: rgba(0, 0, 0, 0.04);
+        }
+
+        /* Sidebar Logo */
+        .sidebar-logo {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-logo img {
+            height: 50px;
+        }
+
+        /* Main content area padding */
+        .main-body {
+            padding: 2rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    {% if user.is_authenticated %}
+    <!-- ====== SIDEBAR + LAYOUT ====== -->
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <a href="{% url 'dashboard' %}">
+                    <img src="{% static 'img/logo-dark-mode.png' %}" alt="Icebox Logo" class="logo-dark">
+                    <img src="{% static 'img/logo-light-mode.png' %}" alt="Icebox Logo" class="logo-light"
+                        style="display: none;">
+                </a>
+            </div>
+
+            <div class="sidebar-profile">
+                {% if user.profile_picture %}
+                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" class="sidebar-avatar" style="object-fit: cover;">
+                {% else %}
+                    <div class="sidebar-avatar">
+                        {{ user.first_name|slice:":1" }}{{ user.last_name|slice:":1" }}
+                    </div>
+                {% endif %}
+                
+                <div class="sidebar-username">{{ user.get_full_name|default:user.username }}</div>
+                
+                <div class="sidebar-role">{{ user.get_role_display }}</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="{% url 'dashboard' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <span class="sidebar-icon">📊</span> Dashboard
+                </a>
+
+                {% if user.role == 'admin' or user.role == 'super_admin' %}
+                <a href="{% url 'startups_list' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'startups_list' or request.resolver_match.url_name == 'add_startup' %}active{% endif %}">
+                    <span class="sidebar-icon">🚀</span> Startups
+                </a>
+                {% endif %}
+
+            </nav>
+        </aside>
+
+        <div class="main-content">
+            <div class="topbar">
+                <div style="position: relative;">
+                    <button id="notification-toggle" class="nav-icon" aria-label="Notifications">
+                        🔔
+                        {% if unread_notifications_count > 0 %}
+                        <span class="badge">{{ unread_notifications_count }}</span>
+                        {% endif %}
+                    </button>
+
+                    <div id="notification-dropdown" class="notification-dropdown">
+                        <div class="notification-header">
+                            Notifications
+                            {% if unread_notifications_count > 0 %}
+                            <span class="text-sm" style="color: var(--accent-color);">{{ unread_notifications_count }}
+                                Unread</span>
+                            {% endif %}
+                        </div>
+
+                        {% if unread_notifications %}
+                        {% for notif in unread_notifications %}
+                        <a href="{% url 'read_notification' notif.id %}" class="notification-item unread">
+                            <div>{{ notif.message }}</div>
+                            <span class="notification-time">{{ notif.created_at|timesince }} ago</span>
+                        </a>
+                        {% endfor %}
+                        {% else %}
+                        <div class="notification-empty">
+                            No new notifications
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="topbar-user" id="user-menu-toggle">
+                    {% if user.profile_picture %}
+                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" class="topbar-user-avatar"
+                        style="object-fit: cover;">
+                    {% else %}
+                    <div class="topbar-user-avatar">
+                        {{ user.first_name|slice:":1" }}{{ user.last_name|slice:":1" }}
+                    </div>
+                    {% endif %}
+                    <span class="text-sm font-bold" style="color: var(--text-primary);">{{ user.username }}</span>
+                    <span style="font-size: 0.7rem; color: var(--text-tertiary);">▼</span>
+
+                    <div id="user-dropdown" class="user-dropdown">
+                        {% if user.role == 'super_admin' %}
+                        <a href="{% url 'add_admin' %}" class="user-dropdown-item">
+                            Manage Admins
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'settings' %}" class="user-dropdown-item">
+                            Settings
+                        </a>
+                        <button id="theme-toggle" class="user-dropdown-item" style="border-radius: 0;">
+                            <span id="theme-label">Dark Mode</span>
+                            <span id="theme-icon">🌙</span>
+                        </button>
+                        <a href="{% url 'logout' %}" class="user-dropdown-item" style="color: var(--danger-color);">
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-body">
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'danger' %}error{% else %}{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% endif %}
+
+                {% block content %}
+                {% endblock %}
+
+                {% if user.is_authenticated %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+        // Theme Toggler Logic
+        const toggleBtn = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const themeLabel = document.getElementById('theme-label');
+        const body = document.body;
+
+        // Apply saved theme to body (documentElement was set in head for FOUC)
+        function applyThemeUI() {
+            const isLight = localStorage.getItem('theme') === 'light';
+            if (isLight) {
+                body.classList.add('light-mode');
+            } else {
+                body.classList.remove('light-mode');
+            }
+            if (themeIcon) themeIcon.textContent = isLight ? '☀️' : '🌙';
+            if (themeLabel) themeLabel.textContent = isLight ? 'Light Mode' : 'Dark Mode';
+        }
+
+        // Apply on load
+        applyThemeUI();
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                const isCurrentlyLight = body.classList.contains('light-mode');
+                const newTheme = isCurrentlyLight ? 'dark' : 'light';
+                localStorage.setItem('theme', newTheme);
+
+                // Toggle on both body and documentElement
+                body.classList.toggle('light-mode');
+                document.documentElement.classList.toggle('light-mode');
+
+                const isLight = newTheme === 'light';
+                if (themeIcon) themeIcon.textContent = isLight ? '☀️' : '🌙';
+                if (themeLabel) themeLabel.textContent = isLight ? 'Light Mode' : 'Dark Mode';
+            });
+        }
+
+        // Notification Dropdown Logic
+        const notifToggle = document.getElementById('notification-toggle');
+        const notifDropdown = document.getElementById('notification-dropdown');
+
+        if (notifToggle && notifDropdown) {
+            notifToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                notifDropdown.classList.toggle('show');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
+                    notifDropdown.classList.remove('show');
+                }
+            });
+        }
+
+        // User Menu Logic
+        const userToggleBtn = document.getElementById('user-menu-toggle');
+        const userDropdown = document.getElementById('user-dropdown');
+
+        if (userToggleBtn && userDropdown) {
+            userToggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('show');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!userToggleBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+                    userDropdown.classList.remove('show');
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

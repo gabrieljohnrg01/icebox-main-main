@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block title %}Startups{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <!-- Header Row -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <h2 id="page-heading" style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin: 0;">All Startups</h2>
+        
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <a href="{% url 'add_startup' %}" class="btn btn-primary" style="padding: 0.4rem 0.9rem; border-radius: 6px; font-weight: 600; font-size: 0.8rem; text-decoration: none; display: flex; align-items: center; gap: 0.35rem;">
+                <span style="font-size: 1rem; line-height: 1;">+</span> New Startup
+            </a>
+            
+            <div style="position: relative;">
+                <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); font-size: 0.8rem;">🔍</span>
+                <input type="text" id="search-input" placeholder="Search..." class="form-control" style="padding: 0.4rem 0.75rem 0.4rem 2rem; border-radius: 6px; font-size: 0.8rem; width: 180px;">
+            </div>
+            
+            <!-- Filter Dropdown -->
+            <div style="position: relative;" id="filter-wrapper">
+                <button id="filter-toggle" class="btn btn-ghost" style="padding: 0.4rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-weight: 600; font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                    <span id="filter-label">All Startups</span>
+                    <span style="font-size: 0.65rem; margin-left: 0.15rem;">▼</span>
+                </button>
+                <div id="filter-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); right: 0; min-width: 160px; background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--glass-shadow); z-index: 100; overflow: hidden;">
+                    <button class="filter-option" data-filter="all" style="width: 100%; padding: 0.5rem 0.75rem; border: none; background: none; text-align: left; font-size: 0.8rem; color: var(--text-primary); cursor: pointer; font-weight: 600;">All Startups</button>
+                    <button class="filter-option" data-filter="active" style="width: 100%; padding: 0.5rem 0.75rem; border: none; background: none; text-align: left; font-size: 0.8rem; color: var(--text-primary); cursor: pointer;">Active Startups</button>
+                    <button class="filter-option" data-filter="completed" style="width: 100%; padding: 0.5rem 0.75rem; border: none; background: none; text-align: left; font-size: 0.8rem; color: var(--text-primary); cursor: pointer;">Completed</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Startups Grid -->
+    <div id="startups-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem;">
+        {% for startup in startups %}
+        <div class="glass-card startup-card" data-name="{{ startup.name|lower }}" data-status="{% if startup.current_milestone %}active{% else %}completed{% endif %}" style="padding: 1.5rem 1.25rem; text-align: center; display: flex; flex-direction: column; align-items: center; border-radius: 12px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onclick="window.location.href='{% url 'view_startup' startup.id %}'">
+            
+            <!-- Avatar -->
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-color), var(--brand-teal)); margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.15); overflow: hidden;">
+                {% if startup.logo %}
+                <img src="{{ startup.logo.url }}" alt="{{ startup.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                <span style="color: white; font-size: 1.4rem; font-weight: bold; text-transform: uppercase;">{{ startup.name|slice:":2" }}</span>
+                {% endif %}
+            </div>
+            
+            <!-- Name -->
+            <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; width: 100%;">{{ startup.name }}</h3>
+            
+            <!-- Milestones List -->
+            <div style="width: 100%; text-align: left; font-size: 0.8rem; color: var(--text-secondary);">
+                {% for milestone in startup.milestones.all|dictsort:"milestone_progress" %}
+                    <div style="margin-bottom: 0.35rem; display: flex; align-items: flex-start; gap: 0.35rem;">
+                        <span style="color: var(--text-tertiary); font-size: 0.65rem; margin-top: 2px;">›</span>
+                        <div style="flex: 1; font-weight: {% if milestone == startup.current_milestone %}600{% else %}400{% endif %}; color: {% if milestone == startup.current_milestone %}var(--text-primary){% else %}var(--text-secondary){% endif %};">
+                            Milestone {{ milestone.milestone_progress }}
+                            
+                            {% if milestone.status == 'completed' %}
+                                <span style="color: var(--success-color); font-weight: bold; margin-left: 0.2rem;">✔️</span>
+                            {% elif milestone == startup.current_milestone %}
+                                <!-- Active Milestone: Show deliverables -->
+                                <div style="margin-top: 0.25rem; margin-left: 0.4rem; display: flex; flex-direction: column; gap: 0.15rem; font-weight: normal; font-size: 0.75rem;">
+                                    {% for deliverable in milestone.deliverables.all %}
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <span style="color: var(--text-secondary);">- {{ deliverable.name|truncatechars:20 }}</span>
+                                            {% if deliverable.status == 'approved' %}
+                                                <span style="color: var(--success-color);">✔️</span>
+                                            {% else %}
+                                                <span style="color: var(--danger-color); font-size: 0.65rem; margin-top: 2px;">❌</span>
+                                            {% endif %}
+                                        </div>
+                                    {% empty %}
+                                        <span style="color: var(--text-tertiary); font-style: italic;">No deliverables</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <!-- Future Milestone -->
+                                <span style="color: var(--danger-color); font-size: 0.65rem; margin-left: 0.2rem;">❌</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% empty %}
+                    <div style="text-align: center; color: var(--text-tertiary); font-style: italic; margin-top: 0.75rem;">No milestones configured.</div>
+                {% endfor %}
+            </div>
+            
+        </div>
+        {% empty %}
+        <div id="empty-state" class="glass-card" style="grid-column: 1 / -1; padding: 3rem 2rem; text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🚀</div>
+            <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.4rem;">No Startups Yet</h3>
+            <p style="color: var(--text-tertiary); font-size: 0.85rem; margin-bottom: 1.25rem;">Get started by registering your first startup in the incubator program.</p>
+            <a href="{% url 'add_startup' %}" class="btn btn-primary" style="padding: 0.6rem 1.25rem; text-decoration: none; display: inline-block; font-size: 0.85rem;">Add Startup</a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- No results message (hidden by default) -->
+    <div id="no-results" class="glass-card" style="display: none; padding: 2rem; text-align: center; margin-top: 1rem;">
+        <p style="color: var(--text-tertiary); font-size: 0.85rem;">No startups match your search or filter.</p>
+    </div>
+</div>
+
+<style>
+    .filter-option:hover {
+        background: var(--subtle-overlay) !important;
+    }
+    .filter-option.active-filter {
+        font-weight: 600 !important;
+        color: var(--accent-color) !important;
+    }
+    .startup-card:hover {
+        transform: translateY(-2px);
+    }
+</style>
+
+<script>
+(function() {
+    const filterToggle = document.getElementById('filter-toggle');
+    const filterDropdown = document.getElementById('filter-dropdown');
+    const filterLabel = document.getElementById('filter-label');
+    const filterOptions = document.querySelectorAll('.filter-option');
+    const searchInput = document.getElementById('search-input');
+    const cards = document.querySelectorAll('.startup-card');
+    const noResults = document.getElementById('no-results');
+    const heading = document.getElementById('page-heading');
+    
+    let currentFilter = 'all';
+
+    // Toggle dropdown
+    if (filterToggle) {
+        filterToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            filterDropdown.style.display = filterDropdown.style.display === 'none' ? 'block' : 'none';
+        });
+    }
+
+    // Close dropdown on outside click
+    document.addEventListener('click', function(e) {
+        if (filterDropdown && !filterToggle.contains(e.target)) {
+            filterDropdown.style.display = 'none';
+        }
+    });
+
+    // Filter option click
+    filterOptions.forEach(function(opt) {
+        opt.addEventListener('click', function() {
+            currentFilter = this.dataset.filter;
+            filterLabel.textContent = this.textContent;
+            heading.textContent = this.textContent;
+            filterDropdown.style.display = 'none';
+
+            // Update active state
+            filterOptions.forEach(function(o) { o.classList.remove('active-filter'); });
+            this.classList.add('active-filter');
+
+            applyFilters();
+        });
+
+        // Set initial active
+        if (opt.dataset.filter === 'all') opt.classList.add('active-filter');
+    });
+
+    // Search input
+    if (searchInput) {
+        searchInput.addEventListener('input', applyFilters);
+    }
+
+    function applyFilters() {
+        const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        let visibleCount = 0;
+
+        cards.forEach(function(card) {
+            const name = card.dataset.name || '';
+            const status = card.dataset.status || '';
+
+            const matchesSearch = !query || name.includes(query);
+            const matchesFilter = currentFilter === 'all' || status === currentFilter;
+
+            if (matchesSearch && matchesFilter) {
+                card.style.display = '';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Show/hide no results
+        if (noResults) {
+            noResults.style.display = (cards.length > 0 && visibleCount === 0) ? 'block' : 'none';
+        }
+    }
+})();
+</script>
+{% endblock %}
