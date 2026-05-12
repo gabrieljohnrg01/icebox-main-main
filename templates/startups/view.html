@@ -71,13 +71,23 @@
 </div>
 
 {% if user.role == 'admin' or user.role == 'super_admin' %}
-<div class="glass-card mb-lg" style="border: none; background: transparent; padding: 0;">
-    <div class="mb-md">
-        <h3 class="text-lg font-bold text-white mb-md" style="font-size: 1.2rem;">Team Members</h3>
+<div class="glass-card mb-lg" style="border: none; background: transparent; padding: 0; overflow: visible;">
+    <div class="mb-md" style="padding-top: 8px; text-align: center;">
+        <h3 class="text-lg font-bold text-white mb-md" style="font-size: 1.2rem; line-height: 1.5;">Team Members</h3>
         {% if startup_members %}
-        <div class="flex flex-wrap gap-xl">
+        <div class="flex flex-wrap justify-center gap-xl">
             {% for member in startup_members %}
-            <div class="flex flex-col items-center" style="width: 140px;">
+            <div class="flex flex-col items-center" style="width: 140px; position: relative;">
+                {% if user.role == 'admin' or user.role == 'super_admin' %}
+                <button type="button" 
+                        onclick="openDeleteModal('{{ member.id }}', '{{ startup.id }}', '{{ member.get_full_name|default:member.username }}')"
+                        style="position: absolute; top: -10px; right: -10px; background: #2d1a22; border: 1px solid #5a262a; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; color: #fc8181; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 10;" title="Manage Member">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </button>
+                {% endif %}
                 <div class="relative mb-sm">
                     <!-- Avatar Placeholder -->
                     <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #11141a; background-color: #1a202c; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); overflow: hidden;">
@@ -91,22 +101,6 @@
                             </svg>
                         {% endif %}
                     </div>
-                    
-                    <!-- Delete Icon -->
-                    {% if user.role == 'admin' or user.role == 'super_admin' %}
-                    <form method="post" action="{% url 'delete_member' startup.id member.id %}" style="position: absolute; top: 0; right: -25px;">
-                        {% csrf_token %}
-                        <!-- Using a minimalist trash can SVG -->
-                        <button type="submit" 
-                                onclick="return confirm('Remove {{ member.get_full_name|default:member.username }} from this startup?')"
-                                style="background: none; border: none; cursor: pointer; color: #fff; padding: 0;" title="Remove Member">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                        </button>
-                    </form>
-                    {% endif %}
                 </div>
                 
                 <div class="text-center">
@@ -242,4 +236,35 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Delete Member Modal -->
+<div id="deleteMemberModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+    <div class="glass-card" style="width: 400px; padding: 32px; text-align: center; position: relative;">
+        <button type="button" onclick="document.getElementById('deleteMemberModal').style.display='none'" style="position: absolute; top: 16px; right: 16px; background: none; border: none; cursor: pointer; color: #a0aec0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+        <h3 class="text-xl font-bold text-white mb-sm">Manage Member</h3>
+        <p class="text-muted text-sm mb-lg">What would you like to do with <strong id="deleteModalMemberName" class="text-white">this user</strong>?</p>
+        <div class="flex flex-col gap-md">
+            <form id="removeMemberForm" method="post" action="">
+                {% csrf_token %}
+                <button type="submit" class="btn" style="background-color: #2d3748; color: white; width: 100%; padding: 10px; border-radius: 8px;">Remove from Startup Only</button>
+            </form>
+            <form id="deleteAccountForm" method="post" action="">
+                {% csrf_token %}
+                <button type="submit" class="btn" style="background-color: #7f1d1d; color: #fca5a5; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #991b1b;" onclick="return confirm('WARNING: Are you absolutely sure you want to permanently delete this user account from the entire system? This cannot be undone.')">Delete Account Permanently</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openDeleteModal(memberId, startupId, memberName) {
+    document.getElementById('removeMemberForm').action = '/startups/' + startupId + '/members/' + memberId + '/delete/';
+    document.getElementById('deleteAccountForm').action = '/super-admin/users/' + memberId + '/delete/';
+    document.getElementById('deleteModalMemberName').textContent = memberName;
+    document.getElementById('deleteMemberModal').style.display = 'flex';
+}
+</script>
+
 {% endblock %}
