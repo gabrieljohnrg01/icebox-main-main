@@ -1,3 +1,8 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import FBAnnouncement
+
+@admin.register(FBAnnouncement)
+class FBAnnouncementAdmin(admin.ModelAdmin):
+    list_display = ('title', 'text', 'created_at')
+    ordering = ('-created_at',)

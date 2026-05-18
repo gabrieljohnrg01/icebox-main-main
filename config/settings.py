@@ -20,6 +20,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-8a=@2!4dfxzgmydwa$xe$und3st+=7fwif^k!&=*t@#zh5izj=')
@@ -136,3 +140,23 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 # Additional CSRF Settings
 CSRF_USE_SESSIONS = False
 CSRF_FAILURE_VIEW = 'incubator.views.csrf_failure'
+
+# =============================================================================
+# Email Configuration  (uses aiosmtplib — lightweight async SMTP)
+# =============================================================================
+# Set these env vars to enable email notifications:
+#   DJANGO_EMAIL_HOST=smtp.gmail.com
+#   DJANGO_EMAIL_PORT=587
+#   DJANGO_EMAIL_HOST_USER=your@gmail.com
+#   DJANGO_EMAIL_HOST_PASSWORD=your-app-password
+#   DJANGO_DEFAULT_FROM_EMAIL=Icebox Incubator <noreply@yourdomain.com>
+#
+# If EMAIL_HOST_USER is empty, email sending is silently skipped.
+
+EMAIL_HOST = os.environ.get('DJANGO_EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('DJANGO_EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('DJANGO_EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('DJANGO_EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('DJANGO_EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'ICEBOX <noreply@incubator.com>')
+

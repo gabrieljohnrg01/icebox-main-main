@@ -58,17 +58,7 @@
         padding: 10px 0 40px 0;
     }
 
-    .timeline::before {
-        content: '';
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 4px;
-        height: 100%;
-        background: var(--border-color);
-        top: 0;
-        border-radius: 4px;
-    }
+
 
     .timeline-item {
         margin-bottom: 36px;
@@ -111,7 +101,7 @@
         border: 2px solid var(--border-color);
         z-index: 12;
         font-weight: 700;
-        font-size: 14px;
+        font-size: 22px; /* Increased from 14px for Bootstrap Icons */
     }
 
     .timeline-dot.completed {
@@ -207,13 +197,35 @@
             width: calc(100% - 80px);
         }
 
-        .timeline::before {
-            left: 20px;
-        }
+
 
         .timeline-dot {
             left: 20px;
             transform: translateX(0);
+        }
+    }
+
+    .timeline-line {
+        position: absolute;
+        left: 50%;
+        top: 46px;
+        width: 4px;
+        height: 100%;
+        transform: translateX(-50%);
+        background: var(--border-color);
+        z-index: 0;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+    
+    .timeline-line.completed {
+        background: var(--success-color);
+        box-shadow: 0 0 8px rgba(34,197,94,0.5);
+    }
+    
+    @media (max-width: 900px) {
+        .timeline-line {
+            left: 20px;
         }
     }
 </style>
@@ -270,19 +282,28 @@
                 data-global-template="{{ d.global_template_file_json }}"
                 data-comments="{{ d.comments_json }}" onclick="window.location.href='{% url 'edit_deliverable_page' d.obj.id %}'"
                 style="cursor: pointer;">
-                <div
-                    class="timeline-dot {% if d.obj.status == 'approved' %}completed{% elif d.obj.status == 'submitted' %}pending{% elif d.obj.status == 'rejected' %}rejected{% else %}not-started{% endif %}">
+                
+                <!-- Connecting Line -->
+                {% if not forloop.last %}
+                <div class="timeline-line {% if d.obj.status == 'approved' %}completed{% endif %}"></div>
+                {% else %}
+                    {% if user.role in "admin,super_admin" and not is_locked %}
+                    <div class="timeline-line {% if d.obj.status == 'approved' %}completed{% endif %}" style="height: calc(100% + 40px);"></div>
+                    {% endif %}
+                {% endif %}
+
+                <div class="timeline-dot {% if d.obj.status == 'approved' %}completed{% elif d.obj.status == 'submitted' %}pending{% elif d.obj.status == 'rejected' %}rejected{% else %}not-started{% endif %}">
                     {% if d.obj.status == 'approved' %}
-                    ✓
+                    <i class="bi bi-check-circle-fill"></i>
                     {% elif d.obj.status == 'submitted' %}
-                    ⊙
+                    <i class="bi bi-clock-fill"></i>
                     {% elif d.obj.status == 'rejected' %}
-                    ✕
+                    <i class="bi bi-arrow-counterclockwise"></i>
                     {% else %}
-                    ○
+                    <i class="bi bi-clock"></i>
                     {% endif %}
                 </div>
-                <div class="timeline-content">
+                <div class="timeline-content" style="transition: all 0.3s ease; {% if d.obj.status == 'approved' %}border: 1px solid var(--success-color); box-shadow: 0 0 15px rgba(34,197,94,0.3);{% endif %}">
                     <div class="timeline-date">
                         {% if d.obj.due_date %}
                         {{ d.obj.due_date|date:"M d, Y" }}
@@ -294,7 +315,45 @@
                 </div>
             </div>
             {% endfor %}
+            
+            {% if user.role in "admin,super_admin" and not is_locked %}
+            <div style="position:relative; width: 100%; height: 100px;">
+                <button type="button" class="add-deliverable-btn" title="Add Custom Deliverable" onclick="document.getElementById('addCustomDeliverableModal').style.display='flex'">
+                    <i class="bi bi-plus-circle"></i>
+                </button>
+            </div>
+            {% endif %}
 
+        </div>
+    </div>
+
+    
+    <!-- Add Custom Deliverable Modal -->
+    <div id="addCustomDeliverableModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px; padding: 24px;">
+            <div class="modal-header">
+                <h2>Add Custom Deliverable</h2>
+                <button type="button" class="modal-close" onclick="document.getElementById('addCustomDeliverableModal').style.display='none'">&times;</button>
+            </div>
+            <form action="{% url 'add_custom_deliverable' milestone.id %}" method="post">
+                {% csrf_token %}
+                <div class="mb-sm" style="margin-bottom: 12px;">
+                    <label style="font-size:0.85rem; font-weight:500; display:block; margin-bottom:4px;">Deliverable Name</label>
+                    <input type="text" name="name" class="form-control" required placeholder="e.g., Financial Report" style="width:100%; font-size:0.85rem; padding:8px;">
+                </div>
+                <div class="mb-sm" style="margin-bottom: 12px;">
+                    <label style="font-size:0.85rem; font-weight:500; display:block; margin-bottom:4px;">Requirements</label>
+                    <textarea name="requirements" class="form-control" rows="3" placeholder="Description of the deliverable..." style="width:100%; font-size:0.85rem; padding:8px; resize:vertical;"></textarea>
+                </div>
+                <div class="mb-sm" style="margin-bottom: 12px;">
+                    <label style="font-size:0.85rem; font-weight:500; display:block; margin-bottom:4px;">Due Date (Optional)</label>
+                    <input type="date" name="due_date" class="form-control" style="width:100%; font-size:0.85rem; padding:8px;">
+                </div>
+                <div class="flex justify-end gap-xs" style="margin-top: 16px;">
+                    <button type="button" class="btn btn-ghost" onclick="document.getElementById('addCustomDeliverableModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Deliverable</button>
+                </div>
+            </form>
         </div>
     </div>
 

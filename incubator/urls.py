@@ -17,6 +17,7 @@ urlpatterns = [
     path('startups/<int:startup_id>/delete/', views.delete_startup, name='delete_startup'),
     path('startups/add/', views.add_startup, name='add_startup'),
     path('notifications/<int:notification_id>/read/', views.read_notification, name='read_notification'),
+    path('notifications/clear/', views.clear_notifications, name='clear_notifications'),
     path('startups/<int:startup_id>/edit/', views.edit_startup, name='edit_startup'),
     path('startups/<int:startup_id>/', views.view_startup, name='view_startup'),
     path('startups/<int:startup_id>/add-member/', views.add_member, name='add_member'),
@@ -32,6 +33,7 @@ urlpatterns = [
     path('deliverables/<int:deliverable_id>/edit/', views.edit_deliverable_page, name='edit_deliverable_page'),
     path('deliverables/<int:deliverable_id>/update_details/', views.update_deliverable_details, name='update_deliverable_details'),
     path('deliverables/files/<int:file_id>/delete/', views.delete_deliverable_file, name='delete_deliverable_file'),
+    path('milestones/<int:milestone_id>/add_custom_deliverable/', views.add_custom_deliverable, name='add_custom_deliverable'),
     
     # Settings & Templates
     path('settings/', views.settings_view, name='settings'),
@@ -41,4 +43,7 @@ urlpatterns = [
     path('settings/templates/deliverable/add/', views.add_deliverable_template, name='add_deliverable_template'),
     path('settings/templates/deliverable/<int:template_id>/edit/', views.edit_deliverable_template, name='edit_deliverable_template'),
     path('settings/templates/deliverable/<int:template_id>/delete/', views.delete_deliverable_template, name='delete_deliverable_template'),
+    path('settings/cohorts/add/', views.add_cohort, name='add_cohort'),
+    path('settings/cohorts/<int:cohort_id>/edit/', views.edit_cohort, name='edit_cohort'),
+    path('settings/cohorts/<int:cohort_id>/delete/', views.delete_cohort, name='delete_cohort'),
 ]

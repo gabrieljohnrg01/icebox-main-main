@@ -1,94 +1,127 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Edit Deliverable - {{ startup.name }} | {{ block.super }}{% endblock %}
+{% block title %}Deliverable - {{ startup.name }} | {{ block.super }}{% endblock %}
 
 {% block content %}
 <style>
-    /* Styling copied from modal */
     .form-container {
-        background: var(--glass-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: var(--glass-border);
-        border-radius: 16px;
-        padding: 20px;
         color: var(--text-primary);
-        max-width: 1100px;
+        max-width: 1000px;
         margin: 0 auto;
+        padding: 10px;
     }
 
-    .modal-grid {
+    .deliverable-layout {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        align-items: stretch;
+        grid-template-columns: 2.2fr 1fr;
+        gap: 30px;
+        align-items: start;
     }
 
-    .modal-column {
+    @media (max-width: 800px) {
+        .deliverable-layout { grid-template-columns: 1fr; }
+    }
+
+    /* Left Column Styles */
+    .dlv-header {
         display: flex;
-        flex-direction: column;
+        align-items: flex-start;
         gap: 15px;
-    }
-
-    .modal-section {
-        background: rgba(0, 0, 0, 0.1);
-        border: 1px solid var(--border-color);
-        border-radius: 10px;
-        padding: 15px;
-    }
-    body.light-mode .modal-section {
-        background: rgba(255, 255, 255, 0.6);
-    }
-
-    .modal-section h3 {
-        margin-top: 0;
-        margin-bottom: 10px;
-        font-size: 1rem;
-        color: var(--accent-color);
         border-bottom: 1px solid var(--border-color);
-        padding-bottom: 5px;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    .dlv-icon {
+        width: 44px; height: 44px;
+        background: rgba(41, 145, 239, 0.15);
+        color: var(--accent-color);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+    .dlv-title {
+        font-size: 1.8rem;
+        font-weight: 500;
+        color: var(--accent-color);
+        margin: 0 0 5px 0;
+    }
+    .dlv-meta {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        display: flex; justify-content: space-between;
     }
 
-    .file-box {
-        border: 2px dashed var(--border-color);
-        border-radius: 8px;
-        padding: 12px;
-        text-align: center;
-        background: rgba(0, 0, 0, 0.05);
-        transition: border-color 0.2s, background 0.2s;
-    }
-    body.light-mode .file-box {
-        background: rgba(0, 0, 0, 0.02);
-    }
-
-    .file-box.admin { border-color: rgba(41, 145, 239, 0.5); }
-    .file-box.admin:hover { border-color: var(--accent-color); background: rgba(41, 145, 239, 0.05); }
-
-    .file-box.incubatee { border-color: rgba(46, 204, 113, 0.5); }
-    .file-box.incubatee:hover { border-color: #2ecc71; background: rgba(46, 204, 113, 0.05); }
-
-    .readiness-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .btn-done, .btn-revision {
-        padding: 10px 24px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: 600;
+    .dlv-requirements {
         font-size: 0.95rem;
-        transition: opacity 0.2s, transform 0.2s;
-        color: #fff;
+        line-height: 1.6;
+        color: var(--text-primary);
+        white-space: pre-wrap;
+        margin-bottom: 30px;
     }
-    .btn-done { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); }
-    .btn-revision { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
-    .btn-done:hover, .btn-revision:hover { opacity: 0.9; transform: translateY(-1px); }
 
-    /* Custom RL Dropdown */
+    .dlv-section-title { font-size: 1rem; font-weight: 600; margin-bottom: 15px; color: var(--text-primary); }
+
+    /* Admin Files List */
+    .admin-file-card {
+        border: 1px solid var(--border-color);
+        border-radius: 8px; padding: 12px 15px;
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 10px; background: rgba(0,0,0,0.05);
+        transition: background 0.2s;
+    }
+    body.light-mode .admin-file-card { background: #f8f9fa; }
+    .admin-file-card:hover { background: rgba(41,145,239,0.05); border-color: var(--accent-color); }
+    .admin-file-link { font-weight: 500; color: var(--text-primary); text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
+    
+    /* Right Column Styles */
+    .work-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    body.light-mode .work-card { background: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    .work-header {
+        display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+    }
+    .work-header h3 { font-size: 1.2rem; font-weight: 500; margin: 0; }
+    
+    .status-approved { color: #2ecc71; }
+    .status-submitted { color: var(--accent-color); }
+    .status-rejected { color: #e74c3c; }
+
+    .submission-item {
+        border: 1px solid var(--border-color);
+        border-radius: 8px; padding: 10px;
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 10px; background: var(--bg-primary);
+    }
+    body.light-mode .submission-item { background: #f8f9fa; }
+    .submission-content { display: flex; align-items: center; gap: 10px; overflow: hidden; }
+    .submission-content i { font-size: 1.2rem; flex-shrink: 0; color: var(--accent-color); }
+    .submission-content .link-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem; font-weight: 500; text-decoration: none; color: var(--text-primary); }
+    .submission-content .link-text:hover { text-decoration: underline; }
+    
+    .btn-add {
+        width: 100%; border: 1px dashed var(--border-color); background: transparent; color: var(--accent-color);
+        padding: 10px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+        margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-add:hover { background: rgba(41,145,239,0.05); border-color: var(--accent-color); }
+    
+    .add-options { display: none; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: var(--bg-primary); }
+    body.light-mode .add-options { background: #fff; }
+    .add-opt-btn { width: 100%; text-align: left; background: none; border: none; padding: 10px 15px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; border-bottom: 1px solid var(--border-color); }
+    .add-opt-btn:last-child { border-bottom: none; }
+    .add-opt-btn:hover { background: rgba(0,0,0,0.05); }
+    body.light-mode .add-opt-btn:hover { background: #f0f0f0; }
+
+    /* RL Styles */
+    .readiness-grid { display: flex; flex-direction: column; gap: 10px; }
     .rl-custom-dropdown { position: relative; flex: 1; min-width: 0; max-width: 280px; }
     .rl-dd-trigger {
         display: flex; align-items: center; justify-content: space-between;
@@ -133,7 +166,6 @@
     .rl-dd-tooltip .rl-tooltip-indicator { font-weight: 700; color: var(--accent-color); font-size: 11.5px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1.4; }
     .rl-dd-tooltip .rl-tooltip-desc { color: var(--text-secondary); font-size: 11.5px; line-height: 1.55; white-space: pre-line; }
 
-    /* Info Card */
     .rl-info-card {
         margin-top: 5px; background: rgba(0, 0, 0, 0.15); border-left: 3px solid var(--accent-color);
         padding: 8px 10px; border-radius: 0 6px 6px 0; font-size: 11.5px; display: none;
@@ -144,104 +176,259 @@
     .rl-info-indicator { font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
     .rl-info-desc { color: var(--text-secondary); line-height: 1.35; white-space: pre-line; }
 
-    .fb-comments-section { display: flex; flex-direction: column; gap: 10px; }
-    .fb-comment-header { font-weight: bold; font-size: 1rem; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
-    .fb-comments-list { display: flex; flex-direction: column; gap: 10px; max-height: 200px; overflow-y: auto; padding-right: 5px; }
-    .fb-comment { display: flex; gap: 10px; }
-    .fb-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-    .fb-comment-content { background: rgba(0,0,0,0.2); padding: 10px 14px; border-radius: 18px; border-top-left-radius: 4px; max-width: 100%; word-break: break-word; }
+    /* Comments Styles */
+    .fb-comments-section { display: flex; flex-direction: column; gap: 15px; margin-top: 40px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+    .fb-comment-header { font-weight: 500; font-size: 1.2rem; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+    .fb-comments-list { display: flex; flex-direction: column; gap: 15px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
+    .fb-comment { display: flex; gap: 12px; }
+    .fb-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-color); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; font-weight: bold; }
+    .fb-comment-content { background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 12px 16px; border-radius: 18px; border-top-left-radius: 4px; max-width: 100%; word-break: break-word; }
     body.light-mode .fb-comment-content { background: #f0f2f5; }
-    .fb-comment-author { font-weight: 600; font-size: 0.85rem; margin-bottom: 2px; color: var(--text-primary); }
-    .fb-comment-text { font-size: 0.9rem; color: var(--text-primary); white-space: pre-line; margin: 0; line-height: 1.4; }
-    .fb-comment-date { font-size: 0.75rem; color: var(--text-tertiary); margin-top: 4px; margin-left: 44px; }
-    .fb-comment-box { display: flex; gap: 10px; align-items: flex-end; margin-top: 5px; }
-    .fb-input-wrapper { flex: 1; position: relative; display: flex; align-items: center; background: rgba(0,0,0,0.2); border-radius: 20px; padding: 0 10px; }
+    .fb-comment-author { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; color: var(--text-primary); display: flex; justify-content: space-between; gap: 15px; }
+    .fb-comment-date { font-size: 0.75rem; color: var(--text-tertiary); font-weight: 400; }
+    .fb-comment-text { font-size: 0.95rem; color: var(--text-primary); white-space: pre-wrap; margin: 0; line-height: 1.5; }
+    .fb-comment-box { display: flex; gap: 12px; align-items: flex-start; margin-top: 10px; }
+    .fb-input-wrapper { flex: 1; position: relative; display: flex; align-items: flex-end; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 18px; padding: 2px 10px; }
     body.light-mode .fb-input-wrapper { background: #f0f2f5; }
-    .fb-textarea { width: 100%; border: none; background: transparent; color: var(--text-primary); font-size: 0.9rem; padding: 10px 35px 10px 5px; resize: none; max-height: 100px; outline: none; font-family: inherit; }
-    .fb-send-btn { position: absolute; right: 8px; bottom: 8px; background: none; border: none; color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; transition: transform 0.2s; border-radius: 50%; }
+    .fb-textarea { width: 100%; border: none; background: transparent; color: var(--text-primary); font-size: 0.95rem; padding: 10px 35px 10px 5px; resize: none; max-height: 120px; outline: none; font-family: inherit; line-height: 1.4; }
+    .fb-send-btn { position: absolute; right: 8px; bottom: 8px; background: none; border: none; color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 6px; transition: transform 0.2s; border-radius: 50%; }
     .fb-send-btn:hover { background: rgba(41,145,239,0.1); transform: scale(1.1); }
     .fb-send-btn svg { width: 20px; height: 20px; }
-    .delete-file-btn { color: #e74c3c; background: none; border: none; cursor: pointer; font-size: 14px; padding: 0 5px; opacity: 0.7; }
-    .delete-file-btn:hover { opacity: 1; text-decoration: underline; }
 
-    @media (max-width: 768px) {
-        .modal-grid { grid-template-columns: 1fr; }
-        .rl-dd-tooltip { width: 240px; font-size: 11px; }
+    /* Button Colors */
+    .btn-done, .btn-revision {
+        padding: 10px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: opacity 0.2s, transform 0.2s; color: #fff;
     }
+    .btn-done { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); }
+    .btn-revision { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
+    .btn-done:hover, .btn-revision:hover { opacity: 0.9; transform: translateY(-1px); }
 </style>
 
-<div class="mb-lg">
-    <a href="{% url 'view_milestone' startup.id milestone.id %}" class="text-accent hover:underline flex items-center gap-sm">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-        Back to Milestone
+<div class="mb-lg" style="margin-left: 10px; margin-top: 10px;">
+    <a href="{% url 'view_milestone' startup.id milestone.id %}" class="text-accent hover:underline flex items-center gap-sm" style="font-weight: 500;">
+        <i class="bi bi-arrow-left"></i> Back to {{ milestone.title|default:"Milestone" }}
     </a>
 </div>
 
 <div class="form-container">
-    <h2 style="margin-top:0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; font-size: 1.3rem;">
-        Edit Deliverable: {{ deliverable.name }}
-    </h2>
-
-    <form id="deliverableDetailsForm" method="post" action="{% url 'update_deliverable_details' deliverable.id %}">
+    <form id="deliverableDetailsForm" method="post" action="{% url 'update_deliverable_details' deliverable.id %}" enctype="multipart/form-data">
         {% csrf_token %}
         <input type="hidden" name="action" id="modalActionInput" value="save">
 
-        <div class="modal-grid">
-            <!-- Left Column -->
-            <div class="modal-column">
-                <!-- Admin Files Section -->
-                <div class="modal-section">
-                    <h3>Admin Files</h3>
-                    <div class="file-box admin" id="adminFileBox">
-                        <div id="adminFileLink">
-                            {% if admin_files %}
-                                <ul style="list-style:none; padding:0; margin:0; text-align:left;">
-                                {% for f in admin_files %}
-                                    <li style="margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,0.2); padding:8px 12px; border-radius:6px; border:1px solid var(--border-color);" data-file-id="{{ f.id }}">
-                                        <a href="{{ f.file.url }}" target="_blank" style="color:var(--accent-color); text-decoration:none; display:flex; align-items:center; gap:8px;">
-                                            📄 {{ f.file.name|slice:"15:" }}
-                                        </a>
-                                        {% if user.role == 'admin' or user.role == 'super_admin' %}
-                                        <button type="button" class="delete-file-btn" onclick="deleteFileAsync({{ f.id }}, 'admin')" title="Delete File">✕</button>
-                                        {% endif %}
-                                    </li>
-                                {% endfor %}
-                                </ul>
+        <div class="deliverable-layout">
+            <!-- Left Column: Content -->
+            <div>
+                <!-- Header -->
+                <div class="dlv-header">
+                    <div class="dlv-icon">
+                        <i class="bi bi-clipboard-check"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h2 class="dlv-title">{{ deliverable.name }}</h2>
+                        <div class="dlv-meta">
+                            <span>{{ startup.name }}</span>
+                            {% if user.role in "admin,super_admin" and deliverable.status != 'approved' %}
+                            <span style="display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; margin: 0;">Set Due Date:</label>
+                                <input type="date" name="due_date" class="form-control" style="width: auto; padding: 4px 8px; font-size: 0.85rem; height: auto;" value="{{ deliverable.due_date|date:'Y-m-d' }}">
+                            </span>
                             {% else %}
-                                📄 No startup-specific Admin File attached
+                            <span>{% if deliverable.due_date %}Due {{ deliverable.due_date|date:"M d, Y" }}{% else %}No due date{% endif %}</span>
                             {% endif %}
                         </div>
+                    </div>
+                </div>
 
-                        {% if user.role == 'admin' or user.role == 'super_admin' %}
-                        <div id="adminUploadWrapper" style="margin-top:15px;">
-                            <label for="adminFileInput" class="btn btn-small" style="cursor: pointer; display: inline-block;">Upload (Admin)</label>
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% if global_template_data %}
-                    <div style="margin-top: 15px; padding: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-color); border-radius: 8px;">
-                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px;">Template File:</div>
-                        <a href="{{ global_template_data.url }}" target="_blank" style="color: var(--accent-color); text-decoration: none; display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">
-                            📄 {{ global_template_data.name }}
-                        </a>
-                    </div>
+                <!-- Requirements -->
+                <div class="dlv-requirements">
+                    {% if user.role == 'incubatee' or deliverable.status == 'approved' %}
+                    <div>{{ deliverable.requirements|linebreaksbr }}</div>
+                    {% else %}
+                    <textarea id="requirements" name="requirements" class="form-control" rows="6" placeholder="Add instructions or requirements..." style="font-size: 0.95rem;">{{ deliverable.requirements }}</textarea>
                     {% endif %}
                 </div>
 
+                <!-- Admin Files / Reference Materials -->
+                {% if admin_files or global_template_data or global_template_link or user.role in "admin,super_admin" %}
+                <div class="dlv-section">
+                    <div class="dlv-section-title"><i class="bi bi-journal-text" style="color: var(--accent-color);"></i> Reference Materials</div>
+                    
+                    {% if global_template_data %}
+                    <div class="admin-file-card">
+                        <a href="{{ global_template_data.url }}" target="_blank" class="admin-file-link">
+                            <i class="bi bi-file-earmark-pdf" style="color: #e74c3c;"></i> {{ global_template_data.name }} (Template)
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    {% if global_template_link %}
+                    <div class="admin-file-card">
+                        <a href="{{ global_template_link }}" target="_blank" class="admin-file-link">
+                            <i class="bi bi-link-45deg" style="color: #27ae60;"></i> {{ global_template_link }} (Template Link)
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    {% for f in admin_files %}
+                    <div class="admin-file-card" data-file-id="{{ f.id }}">
+                        {% if f.file %}
+                        <a href="{{ f.file.url }}" target="_blank" class="admin-file-link">
+                            <i class="bi bi-file-earmark"></i> {{ f.file.name|slice:"15:" }}
+                        </a>
+                        {% elif f.link_url %}
+                        <a href="{{ f.link_url }}" target="_blank" class="admin-file-link">
+                            <i class="bi bi-link-45deg"></i> {{ f.link_url }}
+                        </a>
+                        {% endif %}
+                        {% if user.role in "admin,super_admin" and deliverable.status != 'approved' %}
+                        <button type="button" class="btn btn-ghost btn-small" onclick="deleteFileAsync({{ f.id }}, 'admin')" style="color: #e74c3c; padding: 4px 8px;">✕</button>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+
+                    {% if not admin_files and not global_template_data and not global_template_link and user.role == 'incubatee' %}
+                    <p style="color: var(--text-tertiary); font-style: italic; font-size: 0.9rem;">No reference materials provided.</p>
+                    {% endif %}
+
+                    {% if user.role in "admin,super_admin" and deliverable.status != 'approved' %}
+                    <button type="button" class="btn-add" onclick="toggleAdminAddOptions()" style="margin-top: 10px;">
+                        <i class="bi bi-plus-lg"></i> Add Reference
+                    </button>
+                    
+                    <div id="adminAddOptionsDiv" class="add-options">
+                        <button type="button" class="add-opt-btn" onclick="document.getElementById('adminFileInput').click()"><i class="bi bi-file-earmark-arrow-up" style="color: #2980b9;"></i> File</button>
+                        <button type="button" class="add-opt-btn" onclick="toggleAdminSubOption('adminAddLinkDiv')"><i class="bi bi-link-45deg" style="color: #27ae60;"></i> Link</button>
+                        <div id="adminAddLinkDiv" style="display: none; padding: 10px; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.02);">
+                            <input type="url" id="adminLinkInput" class="form-control" placeholder="Paste link here..." style="font-size: 0.85rem; padding: 8px;">
+                            <button type="button" class="btn btn-primary btn-small" style="width: 100%; margin-top: 8px;" onclick="uploadAdminSubmissionAsync('link')">Add Link</button>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+
+
+                <!-- Comments -->
+                <div class="fb-comments-section">
+                    <div class="fb-comment-header"><i class="bi bi-chat-text" style="color: var(--accent-color);"></i> Class Comments</div>
+                    
+                    <div class="fb-comment-box">
+                        <div class="fb-avatar">{{ user.username|make_list|first|upper }}</div>
+                        <div class="fb-input-wrapper">
+                            <textarea class="fb-textarea" name="comment" placeholder="Add a class comment..." rows="1" oninput="this.style.height = '';this.style.height = this.scrollHeight + 'px'" {% if deliverable.status == 'approved' %}disabled{% endif %}></textarea>
+                            {% if deliverable.status != 'approved' %}
+                            <button type="submit" class="fb-send-btn" title="Send Comment" onclick="document.getElementById('modalActionInput').value='save';">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                                </svg>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div id="commentsList" class="fb-comments-list" style="margin-top: 10px;">
+                        {% for comment in comments %}
+                        <div>
+                            <div class="fb-comment">
+                                <div class="fb-avatar">{{ comment.user.username|make_list|first|upper }}</div>
+                                <div>
+                                    <div class="fb-comment-content">
+                                        <div class="fb-comment-author">
+                                            <span>{{ comment.user.username }}</span>
+                                            <span class="fb-comment-date">{{ comment.created_at|date:"M d, Y, g:i a" }}</span>
+                                        </div>
+                                        <p class="fb-comment-text">{{ comment.content }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div style="color: var(--text-tertiary); font-size: 0.9rem; text-align: center; padding: 15px 0; font-style: italic;">No class comments yet.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Submission -->
+            <div>
+                <div class="work-card">
+                    <div class="work-header">
+                        <h3>{% if user.role == 'incubatee' %}Your work{% else %}Submission{% endif %}</h3>
+                        {% if deliverable.status == 'approved' %}
+                            <span class="work-status status-approved">Graded</span>
+                        {% elif deliverable.status == 'submitted' %}
+                            <span class="work-status status-submitted">Turned in</span>
+                        {% elif deliverable.status == 'rejected' %}
+                            <span class="work-status status-rejected">Revision Required</span>
+                        {% else %}
+                            <span class="work-status" style="color: var(--text-secondary);">Missing</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Incubatee Submissions List -->
+                    <div id="incubateeFileLink">
+                        {% if incubatee_files %}
+                            {% for f in incubatee_files %}
+                            <div class="submission-item" data-file-id="{{ f.id }}">
+                                <div class="submission-content">
+                                    {% if f.file %}
+                                        <i class="bi bi-file-earmark-check"></i>
+                                        <a href="{{ f.file.url }}" target="_blank" class="link-text">{{ f.file.name|slice:"15:" }}</a>
+                                    {% elif f.link_url %}
+                                        <i class="bi bi-link-45deg"></i>
+                                        <a href="{{ f.link_url }}" target="_blank" class="link-text">{{ f.link_url }}</a>
+                                    {% elif f.text_content %}
+                                        <i class="bi bi-card-text"></i>
+                                        <a href="javascript:void(0)" onclick="alert('Text Submission:\n\n{{ f.text_content|escapejs }}')" class="link-text">Text Submission</a>
+                                    {% endif %}
+                                </div>
+                                {% if user.role == 'incubatee' and deliverable.status != 'approved' %}
+                                <button type="button" class="btn btn-ghost btn-small" onclick="deleteFileAsync({{ f.id }}, 'incubatee')" style="color: #e74c3c; padding: 4px;">✕</button>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div style="text-align: center; color: var(--text-tertiary); font-size: 0.9rem; margin-bottom: 15px; font-style: italic;">No work attached</div>
+                        {% endif %}
+                    </div>
+
+                    {% if user.role == 'incubatee' and deliverable.status != 'approved' %}
+                    <!-- Add Options Button -->
+                    <button type="button" class="btn-add" onclick="toggleAddOptions()">
+                        <i class="bi bi-plus-lg"></i> Add or create
+                    </button>
+                    
+                    <div id="addOptionsDiv" class="add-options">
+                        <button type="button" class="add-opt-btn" onclick="document.getElementById('incubateeFileInput').click()"><i class="bi bi-file-earmark-arrow-up" style="color: #2980b9;"></i> File</button>
+                        <button type="button" class="add-opt-btn" onclick="toggleSubOption('addLinkDiv')"><i class="bi bi-link-45deg" style="color: #27ae60;"></i> Link</button>
+                        <div id="addLinkDiv" style="display: none; padding: 10px; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.02);">
+                            <input type="url" id="linkInput" class="form-control" placeholder="Paste link here..." style="font-size: 0.85rem; padding: 8px;">
+                            <button type="button" class="btn btn-primary btn-small" style="width: 100%; margin-top: 8px;" onclick="uploadSubmissionAsync('link')">Add Link</button>
+                        </div>
+                        <button type="button" class="add-opt-btn" onclick="toggleSubOption('addTextDiv')"><i class="bi bi-card-text" style="color: #8e44ad;"></i> Text</button>
+                        <div id="addTextDiv" style="display: none; padding: 10px; background: rgba(0,0,0,0.02);">
+                            <textarea id="textInput" class="form-control" placeholder="Write your submission..." rows="4" style="font-size: 0.85rem; padding: 8px;"></textarea>
+                            <button type="button" class="btn btn-primary btn-small" style="width: 100%; margin-top: 8px;" onclick="uploadSubmissionAsync('text')">Add Text</button>
+                        </div>
+                    </div>
+                    {% endif %}
+
+
+                </div>
+
                 <!-- Readiness Levels -->
-                <div class="modal-section">
-                    <h3>Readiness Levels</h3>
+                <div class="work-card" style="margin-top: 20px;">
+                    <div class="dlv-section-title" style="margin-bottom: 20px;"><i class="bi bi-bar-chart-fill" style="color: var(--accent-color);"></i> Readiness Levels</div>
                     <div class="readiness-grid">
                         {% for rl_type in rl_types %}
                         {% with tl=rl_type|lower %}
-                        <div>
-                            <label style="display: flex; align-items: center; gap: 8px; font-weight: bold; cursor: pointer;">
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem; margin-bottom: 5px;">
                                 {% if user.role == 'incubatee' %}
                                 <input type="checkbox" id="{{ tl }}Checkbox" onchange="toggleReadinessSelect(this, '{{ tl }}Select')" disabled> {{ rl_type }}
                                 {% else %}
-                                <input type="checkbox" id="{{ tl }}Checkbox" name="{{ tl }}_checked" onchange="toggleReadinessSelect(this, '{{ tl }}Select')"> {{ rl_type }}
+                                <input type="checkbox" id="{{ tl }}Checkbox" name="{{ tl }}_checked" onchange="toggleReadinessSelect(this, '{{ tl }}Select')" {% if deliverable.status == 'approved' %}disabled{% endif %}> {{ rl_type }}
                                 {% endif %}
                             </label>
                             <div style="display: flex; gap: 10px; margin-top: 5px;">
@@ -267,106 +454,66 @@
                         {% endwith %}
                         {% endfor %}
                     </div>
-                </div>
 
-                <!-- Comments -->
-                <div class="modal-section fb-comments-section">
-                    <div class="fb-comment-header">Comments</div>
-                    <div id="commentsList" class="fb-comments-list">
-                        {% for comment in comments %}
-                        <div>
-                            <div class="fb-comment">
-                                <div class="fb-avatar">👤</div>
-                                <div>
-                                    <div class="fb-comment-content">
-                                        <div class="fb-comment-author">{{ comment.user.username }}</div>
-                                        <p class="fb-comment-text">{{ comment.content }}</p>
-                                    </div>
-                                    <div class="fb-comment-date">{{ comment.created_at|date:"M d, Y H:i" }}</div>
-                                </div>
+                    <!-- Submission Action Buttons -->
+                    <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                    {% if deliverable.status != 'approved' %}
+                        {% if user.role in "admin,super_admin" %}
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <button type="submit" class="btn btn-primary" style="width: 100%; font-weight: 600; padding: 12px; font-size: 1rem; border-radius: 8px;" onclick="document.getElementById('modalActionInput').value='save';">Save Changes</button>
+                                {% if incubatee_files %}
+                                <button type="button" class="btn-revision" style="width: 100%; padding: 12px; font-size: 1rem;" onclick="openRevisionModal()"><i class="bi bi-arrow-counterclockwise" style="margin-right: 5px;"></i> Ask for Revision</button>
+                                <button type="submit" class="btn-done" style="width: 100%; padding: 12px; font-size: 1rem;" onclick="document.getElementById('modalActionInput').value='done';"><i class="bi bi-check-circle-fill" style="margin-right: 5px;"></i> Mark as Done</button>
+                                {% else %}
+                                <div style="text-align: center; color: var(--text-tertiary); font-size: 0.9rem; padding: 10px;">Waiting for submission...</div>
+                                {% endif %}
+                                <a href="{% url 'view_milestone' startup.id milestone.id %}" class="btn btn-ghost" style="width: 100%; text-align: center; padding: 12px; font-size: 1rem;">Cancel</a>
                             </div>
-                        </div>
-                        {% empty %}
-                        <div style="color: var(--text-tertiary); font-size: 0.9rem; text-align: center; padding: 15px 0;">No comments yet.</div>
-                        {% endfor %}
-                    </div>
-                    <div class="fb-comment-box">
-                        <div class="fb-avatar">👤</div>
-                        <div class="fb-input-wrapper">
-                            <textarea class="fb-textarea" name="comment" placeholder="Write a comment..." rows="1" oninput="this.style.height = '';this.style.height = this.scrollHeight + 'px'"></textarea>
-                            <button type="submit" class="fb-send-btn" title="Send Comment" onclick="document.getElementById('modalActionInput').value='save';">
-                                <svg viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Column -->
-            <div class="modal-column">
-                <!-- Incubatee Attached File -->
-                <div class="modal-section">
-                    <h3>Incubatee Files</h3>
-                    <div class="file-box incubatee" id="incubateeFileBox">
-                        <div id="incubateeFileLink">
-                            {% if incubatee_files %}
-                                <ul style="list-style:none; padding:0; margin:0; text-align:left;">
-                                {% for f in incubatee_files %}
-                                    <li style="margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,0.2); padding:8px 12px; border-radius:6px; border:1px solid var(--border-color);" data-file-id="{{ f.id }}">
-                                        <a href="{{ f.file.url }}" target="_blank" style="color:#2ecc71; text-decoration:none; display:flex; align-items:center; gap:8px;">
-                                            📎 {{ f.file.name|slice:"15:" }}
-                                        </a>
-                                        {% if user.role == 'incubatee' %}
-                                        <button type="button" class="delete-file-btn" onclick="deleteFileAsync({{ f.id }}, 'incubatee')" title="Delete File">✕</button>
-                                        {% endif %}
-                                    </li>
-                                {% endfor %}
-                                </ul>
-                            {% else %}
-                                📎 No File Submitted
-                            {% endif %}
-                        </div>
-
-                        {% if user.role == 'incubatee' %}
-                        <div id="incubateeUploadWrapper" style="margin-top:15px;">
-                            <label for="incubateeFileInput" class="btn btn-small" style="cursor: pointer; display: inline-block;">Upload File</label>
-                        </div>
+                        {% else %}
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <button type="submit" class="btn btn-primary" style="width: 100%; font-weight: 600; padding: 12px; font-size: 1rem; border-radius: 8px; background: var(--glass-bg); border: 1px solid var(--border-color); color: var(--text-primary);" onclick="document.getElementById('modalActionInput').value='save';">Save Changes</button>
+                                {% if incubatee_files %}
+                                    <button type="submit" class="btn btn-primary" style="width: 100%; font-weight: 600; padding: 12px; font-size: 1rem; border-radius: 8px;" onclick="document.getElementById('modalActionInput').value='save';">Turn in</button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-primary" style="width: 100%; font-weight: 600; padding: 12px; font-size: 1rem; border-radius: 8px;" onclick="document.getElementById('modalActionInput').value='save';">Mark as done</button>
+                                {% endif %}
+                                <a href="{% url 'view_milestone' startup.id milestone.id %}" class="btn btn-ghost" style="width: 100%; text-align: center; padding: 12px; font-size: 1rem;">Cancel</a>
+                            </div>
                         {% endif %}
-                    </div>
-                </div>
-
-                <!-- Due Date -->
-                <div class="modal-section">
-                    <h3>Due Date</h3>
-                    {% if user.role == 'incubatee' %}
-                    <input type="date" id="dueDate" class="form-control" value="{{ deliverable.due_date|date:'Y-m-d' }}" disabled>
                     {% else %}
-                    <input type="date" id="dueDate" name="due_date" class="form-control" value="{{ deliverable.due_date|date:'Y-m-d' }}">
+                        <div style="text-align: center; padding: 10px; background: rgba(46, 204, 113, 0.1); color: #2ecc71; border-radius: 8px; font-weight: 600;">Work Returned</div>
                     {% endif %}
                 </div>
-
-                <!-- Requirements -->
-                <div class="modal-section">
-                    <h3>Requirements</h3>
-                    {% if user.role == 'incubatee' %}
-                    <textarea id="requirements" class="form-control" rows="5" disabled>{{ deliverable.requirements }}</textarea>
-                    {% else %}
-                    <textarea id="requirements" name="requirements" class="form-control" rows="5">{{ deliverable.requirements }}</textarea>
-                    {% endif %}
                 </div>
             </div>
         </div>
+        
+        <!-- Revision Modal (Inside Form) -->
+        <div id="revisionModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; backdrop-filter: blur(4px);">
+            <div class="glass-card" style="width: 500px; max-width: 90%; background: var(--bg-primary); padding: 30px; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+                <h3 style="margin-top: 0; font-size: 1.4rem; color: var(--text-primary); margin-bottom: 8px;">Request Revision</h3>
+                <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 20px;">Provide specific feedback on what needs to be revised.</p>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 5px; color: var(--text-primary); font-size: 0.9rem;">Feedback / Requirements *</label>
+                    <textarea name="comment" id="revisionCommentInput" class="form-control" rows="4" style="width: 100%;"></textarea>
+                </div>
 
-        <div style="display: flex; gap: 15px; justify-content: flex-end; margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-            <a href="{% url 'view_milestone' startup.id milestone.id %}" class="btn" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary);">Cancel</a>
-            <button type="submit" class="btn" id="btnSaveOnly" onclick="document.getElementById('modalActionInput').value='save';" style="background: var(--accent-color); color: #fff; border: none;">Save Changes</button>
-            
-            {% if user.role in "admin,super_admin" %}
-                <button type="submit" class="btn-revision" id="btnRevision" onclick="document.getElementById('modalActionInput').value='revision';">Ask for Revision</button>
-                <button type="submit" class="btn-done" id="btnMarkDone" onclick="document.getElementById('modalActionInput').value='done';">Mark as Done</button>
-            {% endif %}
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 5px; color: var(--text-primary); font-size: 0.9rem;">New Revision Deadline (Optional)</label>
+                    <input type="date" name="revision_due_date" class="form-control" style="width: 100%;">
+                </div>
+
+                <div style="margin-bottom: 25px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 5px; color: var(--text-primary); font-size: 0.9rem;">Attach Annotated File (Optional)</label>
+                    <input type="file" name="revision_file" class="form-control" style="width: 100%; padding: 6px;">
+                </div>
+                
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-ghost" onclick="closeRevisionModal()">Cancel</button>
+                    <button type="button" class="btn-revision" onclick="submitRevision()">Submit</button>
+                </div>
+            </div>
         </div>
     </form>
 
@@ -384,77 +531,110 @@
 <!-- Scripts -->
 <script src="{% static 'js/rl_dropdown.js' %}"></script>
 <script>
-    // Embedded RL logic copied from view_milestone.html to manage dropdown states
-    function uploadFilesAsync(event, form, role, inputElement = null) {
-        if (event) event.preventDefault();
-        const formData = new FormData(form);
-        let label, origText, submitBtn;
-
-        if (role === 'incubatee' && inputElement) {
-            if (!inputElement.files || inputElement.files.length === 0) return;
-            label = document.querySelector('label[for="incubateeFileInput"]');
-            origText = label.textContent;
-            label.textContent = 'Uploading...';
-            label.style.pointerEvents = 'none';
-            label.style.opacity = '0.7';
-        } else if (role === 'admin' && inputElement) {
-            if (!inputElement.files || inputElement.files.length === 0) return;
-            label = document.querySelector('label[for="adminFileInput"]');
-            origText = label.textContent;
-            label.textContent = 'Uploading...';
-            label.style.pointerEvents = 'none';
-            label.style.opacity = '0.7';
-        }
-
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                // Reload the page to show new files instead of complex DOM manipulation
-                window.location.reload();
-            } else {
-                throw new Error('Upload failed');
-            }
-        })
-        .catch(err => {
-            console.error('Upload error:', err);
-            if (label) label.textContent = 'Error!';
-        })
-        .finally(() => {
-            if (label) {
-                label.style.pointerEvents = 'auto';
-                label.style.opacity = '1';
-                if (label.textContent === 'Error!') setTimeout(() => { label.textContent = origText; }, 2000);
-                if (inputElement) inputElement.value = ''; // clear input
+    // Comment Styling
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('.fb-comment-text').forEach(el => {
+            let text = el.innerHTML.trim();
+            if (text.startsWith('⚠️ REVISION REQUESTED:')) {
+                el.innerHTML = '<div style="background: rgba(231,76,60,0.1); color: #e74c3c; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; margin-bottom: 8px; display: inline-block;"><i class="bi bi-arrow-counterclockwise" style="margin-right: 4px;"></i>REVISION REQUESTED</div><br>' + text.replace('⚠️ REVISION REQUESTED:', '').trim();
+            } else if (text.startsWith('✅ DELIVERABLE APPROVED:')) {
+                el.innerHTML = '<div style="background: rgba(46,204,113,0.1); color: #2ecc71; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; margin-bottom: 8px; display: inline-block;"><i class="bi bi-check-circle-fill" style="margin-right: 4px;"></i>DELIVERABLE APPROVED</div><br>' + text.replace('✅ DELIVERABLE APPROVED:', '').trim();
             }
         });
+    });
+
+    // Option Toggles
+    function toggleAddOptions() {
+        const div = document.getElementById('addOptionsDiv');
+        div.style.display = div.style.display === 'none' || div.style.display === '' ? 'block' : 'none';
+        document.getElementById('addLinkDiv').style.display = 'none';
+        document.getElementById('addTextDiv').style.display = 'none';
+    }
+
+    function toggleSubOption(id) {
+        document.getElementById('addLinkDiv').style.display = 'none';
+        document.getElementById('addTextDiv').style.display = 'none';
+        document.getElementById(id).style.display = 'block';
+    }
+
+    function uploadSubmissionAsync(type) {
+        const form = new FormData();
+        form.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        if (type === 'link') {
+            const val = document.getElementById('linkInput').value;
+            if (!val) return;
+            form.append('link_url', val);
+        } else if (type === 'text') {
+            const val = document.getElementById('textInput').value;
+            if (!val) return;
+            form.append('text_content', val);
+        }
+
+        fetch("{% url 'attach_incubatee_file' deliverable.id %}", {
+            method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => { if (data.success) window.location.reload(); })
+        .catch(err => console.error(err));
+    }
+
+    function toggleAdminAddOptions() {
+        const div = document.getElementById('adminAddOptionsDiv');
+        div.style.display = div.style.display === 'none' || div.style.display === '' ? 'block' : 'none';
+        document.getElementById('adminAddLinkDiv').style.display = 'none';
+    }
+
+    function toggleAdminSubOption(id) {
+        document.getElementById('adminAddLinkDiv').style.display = 'none';
+        document.getElementById(id).style.display = 'block';
+    }
+
+    function uploadAdminSubmissionAsync(type) {
+        const form = new FormData();
+        form.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        if (type === 'link') {
+            const val = document.getElementById('adminLinkInput').value;
+            if (!val) return;
+            form.append('link_url', val);
+        }
+
+        fetch("{% url 'attach_admin_file' deliverable.id %}", {
+            method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => { if (data.success) window.location.reload(); })
+        .catch(err => console.error(err));
+    }
+
+    // Modal Functions
+    function openRevisionModal() { document.getElementById('revisionModal').style.display = 'flex'; }
+    function closeRevisionModal() { document.getElementById('revisionModal').style.display = 'none'; document.getElementById('revisionCommentInput').value = ''; }
+    function submitRevision() {
+        if (!document.getElementById('revisionCommentInput').value.trim()) return alert('Please provide specific feedback.');
+        document.getElementById('modalActionInput').value = 'revision';
+        document.getElementById('deliverableDetailsForm').submit();
+    }
+
+    // Standard File Upload
+    function uploadFilesAsync(event, form, role, inputElement) {
+        if (event) event.preventDefault();
+        const formData = new FormData(form);
+        fetch(form.action, { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(res => res.json())
+        .then(data => { if (data.success) window.location.reload(); })
+        .catch(err => console.error(err));
     }
 
     function deleteFileAsync(fileId, role) {
-        if (!confirm("Are you sure you want to delete this file?")) return;
+        if (!confirm("Remove this attachment?")) return;
         fetch(`/deliverables/files/${fileId}/delete/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+            method: 'POST', headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value, 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                const elList = document.querySelector(`li[data-file-id="${fileId}"]`);
-                if (elList) elList.remove();
-            } else {
-                alert("Failed to delete file. You may not have permission.");
-            }
-        })
-        .catch(err => console.error("Error deleting file:", err));
+        .then(data => { if (data.success) document.querySelector(`div[data-file-id="${fileId}"]`).remove(); })
+        .catch(err => console.error(err));
     }
 
     function toggleReadinessSelect(checkbox, selectId) {
@@ -479,7 +659,10 @@
             }
         } else {
             if (checkbox.checked) {
-                if (customDD) showRLDropdown(customDD, true);
+                if (customDD) {
+                    showRLDropdown(customDD, true);
+                    setRLDropdownDisabled(customDD, true);
+                }
                 var incVal = selectEl.value;
                 if (incVal && incVal !== 'Incubatee Level') {
                     if (adminCustomDD) showRLDropdown(adminCustomDD, true);
@@ -575,6 +758,12 @@
                     checkbox.style.display = 'inline-block';
                     if (adminCustomDD) showRLDropdown(adminCustomDD, false);
                 }
+            }
+
+            // Lock everything if deliverable is approved
+            if ("{{ deliverable.status }}" === "approved") {
+                if (customDD) setRLDropdownDisabled(customDD, true);
+                if (adminCustomDD) setRLDropdownDisabled(adminCustomDD, true);
             }
         });
     });

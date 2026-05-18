@@ -1,6 +1,32 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ startup.name }}{% endblock %}
+{% block title %}{{ startup.name }}
+    <!-- Add Custom Milestone Modal -->
+    <div id="addCustomMilestoneModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+        <div class="glass-card" style="width: 400px; padding: 24px; position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; font-size: 1.25rem;">Add Custom Milestone</h2>
+                <button type="button" onclick="document.getElementById('addCustomMilestoneModal').style.display='none'" style="background: none; border: none; cursor: pointer; color: #a0aec0; font-size: 1.5rem; line-height: 1;">&times;</button>
+            </div>
+            <form action="{% url 'add_milestone' startup.id %}" method="post">
+                {% csrf_token %}
+                <div style="margin-bottom: 16px;">
+                    <label style="font-size:0.85rem; font-weight:500; display:block; margin-bottom:4px;">Milestone Name</label>
+                    <input type="text" name="title" class="form-control" placeholder="e.g., Prototype Phase" style="width:100%; font-size:0.85rem; padding:8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-primary);">
+                </div>
+                <div style="margin-bottom: 24px;">
+                    <label style="font-size:0.85rem; font-weight:500; display:block; margin-bottom:4px;">Number of Deliverables</label>
+                    <input type="number" name="deliverable_count" class="form-control" min="0" value="0" style="width:100%; font-size:0.85rem; padding:8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-primary);">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn" style="background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color);" onclick="document.getElementById('addCustomMilestoneModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background-color: var(--accent-color); color: white; border: none;">Add Milestone</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+{% endblock %}
 
 {% block content %}
 <div class="glass-card mb-lg relative overflow-hidden">
@@ -25,16 +51,29 @@
             <div>
                 <h1 class="heading-lg mb-xs">{{ startup.name }}</h1>
                 <div class="flex flex-wrap items-center gap-sm mb-md">
+                    {% if startup.cohort %}
+                    <span class="badge" style="background: var(--brand-teal); color: white;">
+                        {{ startup.cohort.name }}
+                    </span>
+                    {% else %}
+                    <span class="badge" style="background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border-color); color: var(--text-secondary);">
+                        No Cohort
+                    </span>
+                    {% endif %}
+                    
                     {% if current_milestone %}
                     <span class="badge badge-info">
                         {% if current_milestone.title %}
-                        {{ current_milestone.title }}
+                        {{ current_milestone.title|upper }}
                         {% else %}
-                        Milestone {{ current_milestone.milestone_progress }}
+                        MILESTONE {{ current_milestone.milestone_progress }}
                         {% endif %}
                     </span>
                     {% endif %}
+                    
+                    {% if startup.industry and startup.industry != "None" %}
                     <span class="text-sm text-muted">{{ startup.industry }}</span>
+                    {% endif %}
                 </div>
                 <p class="text-secondary max-w-2xl mb-md">{{ startup.description }}</p>
 
@@ -126,39 +165,21 @@
         <h2 class="heading-md mb-md">Milestones & Roadmap</h2>
 
         <div class="relative py-lg overflow-x-auto">
-            <!-- Connecting Line -->
-            <div class="absolute w-full bg-border" style="height: 4px; top: 3.5rem; left: 0; z-index: 0;"></div>
 
-            <div class="flex justify-between gap-lg dcss" style="min-width: 600px;">
+
+            <div class="flex items-center w-full" style="min-width: 600px; padding: 1rem 0;">
                 {% for milestone in milestones %}
-                <div class="flex flex-col items-center flex-1 relative z-10 min-w-[200px]">
-                    <!-- status icon moved into card -->
-
+                <div class="flex flex-col items-center relative z-10 w-[240px] flex-shrink-0">
                     <!-- Card -->
                     {% if milestone.is_locked and user.role != 'admin' and user.role != 'super_admin' %}
-                    <div class="glass-card p-md w-full text-center opacity-50 cursor-not-allowed relative">
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" class="text-accent">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                            </svg>
-                        </div>
+                    <div class="glass-card p-md w-full text-center opacity-50 cursor-not-allowed relative" style="transition: all 0.3s ease;">
                         <div class="mb-xs flex items-center justify-center">
-                            <div
-                                class="w-10 h-10 rounded-full flex items-center justify-center border-4 shadow-lg
-                                {% if milestone.status == 'completed' %}bg-success text-white{% elif milestone.id == current_milestone_id %}bg-warning text-black{% else %}bg-secondary text-white{% endif %}">
-                                {% if milestone.status == 'completed' %}
-                                ✓
-                                {% elif milestone.id == current_milestone_id %}
-                                ⏳
-                                {% else %}
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center border-4 shadow-lg bg-secondary text-white">
                                 🔒
-                                {% endif %}
                             </div>
                         </div>
                         <div class="font-bold text-primary mb-xs">
-                            Milestone {{ milestone.milestone_progress }}
+                            {{ milestone.title }}
                         </div>
                         <ul class="text-sm text-muted text-left list-disc list-inside space-y-1">
                             {% if milestone.deliverables.first %}
@@ -170,22 +191,16 @@
                                 <span class="text-muted">Progress</span>
                                 <span class="font-bold text-accent">{{ milestone.progress_percentage }}%</span>
                             </div>
-                            <div
-                                style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
-                                <div
-                                    style="height: 100%; width: {{ milestone.progress_percentage }}%; background: var(--accent-color); border-radius: 3px; transition: width 0.5s ease;">
-                                </div>
+                            <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                                <div style="height: 100%; width: {{ milestone.progress_percentage }}%; background: var(--accent-color); border-radius: 3px; transition: width 0.5s ease;"></div>
                             </div>
                         </div>
                         <div class="text-xs text-accent font-semibold mt-md">Complete previous milestone to unlock</div>
                     </div>
                     {% else %}
-                    <a href="{% url 'view_milestone' startup.id milestone.id %}"
-                        class="glass-card p-md w-full text-center hover:border-accent transition-colors cursor-pointer">
+                    <a href="{% url 'view_milestone' startup.id milestone.id %}" class="glass-card p-md w-full text-center hover:border-accent transition-colors cursor-pointer" style="transition: all 0.3s ease; {% if milestone.status == 'completed' %}border: 1px solid var(--success-color); box-shadow: 0 0 15px rgba(34,197,94,0.3);{% endif %}">
                         <div class="mb-xs flex items-center justify-center">
-                            <div
-                                class="w-10 h-10 rounded-full flex items-center justify-center border-4 shadow-lg
-                                {% if milestone.status == 'completed' %}bg-success text-white{% elif milestone.id == current_milestone_id %}bg-warning text-black{% else %}bg-secondary text-white{% endif %}">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center border-4 shadow-lg {% if milestone.status == 'completed' %}bg-success text-white{% elif milestone.id == current_milestone_id %}bg-warning text-black{% else %}bg-secondary text-white{% endif %}">
                                 {% if milestone.status == 'completed' %}
                                 ✓
                                 {% elif milestone.id == current_milestone_id %}
@@ -196,7 +211,7 @@
                             </div>
                         </div>
                         <div class="font-bold text-primary mb-xs">
-                            Milestone {{ milestone.milestone_progress }}
+                            {{ milestone.title }}
                         </div>
                         <ul class="text-sm text-muted text-left list-disc list-inside space-y-1">
                             {% if milestone.deliverables.first %}
@@ -208,32 +223,41 @@
                                 <span class="text-muted">Progress</span>
                                 <span class="font-bold text-accent">{{ milestone.progress_percentage }}%</span>
                             </div>
-                            <div
-                                style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
-                                <div
-                                    style="height: 100%; width: {{ milestone.progress_percentage }}%; background: var(--accent-color); border-radius: 3px; transition: width 0.5s ease;">
-                                </div>
+                            <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                                <div style="height: 100%; width: {{ milestone.progress_percentage }}%; background: var(--accent-color); border-radius: 3px; transition: width 0.5s ease;"></div>
                             </div>
                         </div>
                     </a>
                     {% endif %}
                 </div>
+
+                {% if not forloop.last %}
+                <!-- Connecting Line -->
+                <div class="mx-md rounded-full" style="flex: 1; height: 6px; min-width: 30px; background-color: {% if milestone.status == 'completed' %}var(--success-color){% else %}rgba(255,255,255,0.1){% endif %}; box-shadow: {% if milestone.status == 'completed' %}0 0 8px rgba(34,197,94,0.5){% else %}none{% endif %}; transition: all 0.3s ease;"></div>
+                {% endif %}
+                
+                {% if forloop.last and user.role == 'admin' or forloop.last and user.role == 'super_admin' %}
+                <!-- Connecting Line to Add Button -->
+                <div class="mx-md rounded-full" style="flex: 1; height: 6px; min-width: 30px; background-color: {% if milestone.status == 'completed' %}var(--success-color){% else %}rgba(255,255,255,0.1){% endif %}; box-shadow: {% if milestone.status == 'completed' %}0 0 8px rgba(34,197,94,0.5){% else %}none{% endif %}; transition: all 0.3s ease;"></div>
+                {% endif %}
+
                 {% empty %}
                 <div class="glass-card w-full text-center text-muted">No milestones defined yet.</div>
                 {% endfor %}
+                
+                {% if user.role == 'admin' or user.role == 'super_admin' %}
+                <div class="flex flex-col items-center justify-center relative z-10 flex-shrink-0" style="width: 48px;">
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                        <button type="button" onclick="document.getElementById('addCustomMilestoneModal').style.display='flex'" style="background: var(--accent-color); border: none; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #fff; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" title="Add Custom Milestone">
+                            <i class="bi bi-plus-circle" style="font-size: 24px;"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
 
-        {% if user.role == 'admin' or user.role == 'super_admin' %}
-        <div class="flex justify-center mt-md">
-            <form method="post" action="{% url 'add_milestone' startup.id %}">
-                {% csrf_token %}
-                <!-- <button type="submit" class="btn btn-outline border-dashed hover:border-accent">
-                    + Add New Milestone
-                </button> -->
-            </form>
-        </div>
-        {% endif %}
+
     </div>
 </div>
 
@@ -266,5 +290,31 @@ function openDeleteModal(memberId, startupId, memberName) {
     document.getElementById('deleteMemberModal').style.display = 'flex';
 }
 </script>
+
+
+    <!-- Add Custom Milestone Modal -->
+    <div id="addCustomMilestoneModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+        <div class="glass-card" style="width: 400px; padding: 24px; position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; font-size: 1.25rem;">Add Custom Milestone</h2>
+                <button type="button" onclick="document.getElementById('addCustomMilestoneModal').style.display='none'" style="background: none; border: none; cursor: pointer; color: #a0aec0; font-size: 1.5rem; line-height: 1;">&times;</button>
+            </div>
+            <form action="{% url 'add_milestone' startup.id %}" method="post">
+                {% csrf_token %}
+                <div style="margin-bottom: 16px;">
+                    <label style="font-size:0.85rem; font-weight:500; display:block; margin-bottom:4px;">Milestone Name</label>
+                    <input type="text" name="title" class="form-control" placeholder="e.g., Prototype Phase" style="width:100%; font-size:0.85rem; padding:8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-primary);">
+                </div>
+                <div style="margin-bottom: 24px;">
+                    <label style="font-size:0.85rem; font-weight:500; display:block; margin-bottom:4px;">Number of Deliverables</label>
+                    <input type="number" name="deliverable_count" class="form-control" min="0" value="0" style="width:100%; font-size:0.85rem; padding:8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-primary);">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn" style="background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color);" onclick="document.getElementById('addCustomMilestoneModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background-color: var(--accent-color); color: white; border: none;">Add Milestone</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 {% endblock %}

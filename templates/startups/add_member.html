@@ -26,8 +26,8 @@
                 </div>
 
                 <div class="flex items-center justify-between gap-md mt-lg pt-md border-t border-glass">
-                    <a href="{% url 'view_startup' startup.id %}" class="btn btn-ghost">Finish & View Startup</a>
-                    <button type="submit" class="btn btn-primary">Add Member & Add Another</button>
+                    <button type="submit" name="action" value="save_and_view" class="btn btn-ghost">Add Member & View Startup</button>
+                    <button type="submit" name="action" value="save_and_add_another" class="btn btn-primary">Add Member & Add Another</button>
                 </div>
             </form>
         </div>

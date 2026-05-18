@@ -17,6 +17,14 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
+class Cohort(models.Model):
+    name = models.CharField(max_length=100)
+    start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
+    
+    def __str__(self):
+        return self.name
+
 class Startup(models.Model):
     STAGE_CHOICES = (
         ('ideation', 'Ideation'),
@@ -33,6 +41,7 @@ class Startup(models.Model):
     email = models.EmailField(max_length=120, blank=True, null=True)
     contact_number = models.CharField(max_length=20, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
+    cohort = models.ForeignKey(Cohort, on_delete=models.SET_NULL, null=True, blank=True, related_name='startups')
     
     members = models.ManyToManyField(User, through='StartupMember', related_name='startups')
 
@@ -120,12 +129,14 @@ class DeliverableFile(models.Model):
         ('incubatee', 'Incubatee'),
     )
     deliverable = models.ForeignKey(Deliverable, on_delete=models.CASCADE, related_name='files')
-    file = models.FileField(upload_to='deliverables/')
+    file = models.FileField(upload_to='deliverables/', blank=True, null=True)
+    link_url = models.URLField(max_length=500, blank=True, null=True)
+    text_content = models.TextField(blank=True, null=True)
     uploaded_by_role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     uploaded_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"{self.deliverable.name} - {self.file.name}"
+        return f"{self.deliverable.name} - Submission"
 
 class Readiness(models.Model):
     deliverable = models.ForeignKey(Deliverable, on_delete=models.CASCADE, related_name='readiness_levels')
@@ -182,7 +193,35 @@ class DeliverableTemplate(models.Model):
     name = models.CharField(max_length=200)
     requirements = models.TextField(blank=True, null=True)
     admin_file = models.FileField(upload_to='admin_templates/', null=True, blank=True)
+    admin_link = models.URLField(max_length=500, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return f"{self.milestone_template.title} - {self.name}"
+
+
+class DeliverableTemplateResource(models.Model):
+    template = models.ForeignKey(DeliverableTemplate, on_delete=models.CASCADE, related_name='resources')
+    file = models.FileField(upload_to='admin_templates/', blank=True, null=True)
+    link = models.URLField(max_length=500, blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f'{self.template.name} Resource'
+
+class FBAnnouncement(models.Model):
+    title = models.CharField(max_length=200, help_text="E.g., Status 1")
+    text = models.CharField(max_length=500, help_text="Text of the status update")
+    url = models.URLField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Keep only the 5 most recent
+        if FBAnnouncement.objects.count() > 5:
+            # Delete the oldest
+            oldest = FBAnnouncement.objects.order_by('created_at').first()
+            oldest.delete()
+
+    def __str__(self):
+        return self.title
