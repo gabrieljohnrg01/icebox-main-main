@@ -264,7 +264,7 @@
                     {% if global_template_link %}
                     <div class="admin-file-card">
                         <a href="{{ global_template_link }}" target="_blank" class="admin-file-link">
-                            <i class="bi bi-link-45deg" style="color: #27ae60;"></i> {{ global_template_link }} (Template Link)
+                            <i class="bi bi-link-45deg" style="color: #27ae60;"></i> {% if global_template_link_title %}{{ global_template_link_title }}{% else %}{{ global_template_link }}{% endif %} (Template Link)
                         </a>
                     </div>
                     {% endif %}
@@ -277,7 +277,7 @@
                         </a>
                         {% elif f.link_url %}
                         <a href="{{ f.link_url }}" target="_blank" class="admin-file-link">
-                            <i class="bi bi-link-45deg"></i> {{ f.link_url }}
+                            <i class="bi bi-link-45deg"></i> {% if f.link_title %}{{ f.link_title }}{% else %}{{ f.link_url }}{% endif %}
                         </a>
                         {% endif %}
                         {% if user.role in "admin,super_admin" and deliverable.status != 'approved' %}
@@ -377,7 +377,7 @@
                                         <a href="{{ f.file.url }}" target="_blank" class="link-text">{{ f.file.name|slice:"15:" }}</a>
                                     {% elif f.link_url %}
                                         <i class="bi bi-link-45deg"></i>
-                                        <a href="{{ f.link_url }}" target="_blank" class="link-text">{{ f.link_url }}</a>
+                                        <a href="{{ f.link_url }}" target="_blank" class="link-text">{% if f.link_title %}{{ f.link_title }}{% else %}{{ f.link_url }}{% endif %}</a>
                                     {% elif f.text_content %}
                                         <i class="bi bi-card-text"></i>
                                         <a href="javascript:void(0)" onclick="alert('Text Submission:\n\n{{ f.text_content|escapejs }}')" class="link-text">Text Submission</a>

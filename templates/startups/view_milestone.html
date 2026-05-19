@@ -1849,8 +1849,14 @@
                 if (adminFiles && adminFiles.length > 0) {
                     let htmlBuilder = '<ul style="list-style-type: none; padding-left: 0; margin-bottom: 0;">';
                     adminFiles.forEach(f => {
+                        let linkHtml = '';
+                        if (f.url && f.url.startsWith('http') && !f.url.includes('/media/')) {
+                            linkHtml = `<a href="${f.url}" target="_blank" rel="noopener" style="word-break: break-all; margin-right: 10px;">🔗 ${f.name}</a>`;
+                        } else {
+                            linkHtml = `<a href="${f.url}" target="_blank" rel="noopener" style="word-break: break-all; margin-right: 10px;">📄 ${f.name}</a>`;
+                        }
                         htmlBuilder += `<li data-file-id="${f.id}" style="margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
-                             <a href="${f.url}" target="_blank" rel="noopener" style="word-break: break-all; margin-right: 10px;">📄 ${f.name}</a>`;
+                             ${linkHtml}`;
                         if ("{{ user.role }}" === "admin" || "{{ user.role }}" === "super_admin") {
                             htmlBuilder += `<button type="button" onclick="deleteFileAsync(${f.id}, 'admin')" style="background: none; border: none; color: var(--danger-color); cursor: pointer; font-weight: bold; padding: 0 5px; font-size: 16px;" title="Delete File">&times;</button>`;
                         }
@@ -1872,8 +1878,21 @@
                 if (uploadFiles && uploadFiles.length > 0) {
                     let htmlBuilder = '<ul style="list-style-type: none; padding-left: 0; margin-bottom: 0;">';
                     uploadFiles.forEach(f => {
+                        let linkHtml = '';
+                        if (f.is_text) {
+                            let safeText = '';
+                            if (f.text_content) {
+                                safeText = f.text_content.replace(/"/g, '&quot;').replace(/\n/g, '\\n');
+                            }
+                            linkHtml = `<a href="javascript:void(0)" onclick="alert('Text Submission:\\n\\n' + decodeURIComponent('${encodeURIComponent(f.text_content || '')}'))" style="word-break: break-all; margin-right: 10px;">📝 Text Submission</a>`;
+                        } else if (f.url && f.url.startsWith('http')) {
+                            linkHtml = `<a href="${f.url}" target="_blank" rel="noopener" style="word-break: break-all; margin-right: 10px;">🔗 ${f.name}</a>`;
+                        } else {
+                            linkHtml = `<a href="${f.url}" target="_blank" rel="noopener" style="word-break: break-all; margin-right: 10px;">📎 ${f.name}</a>`;
+                        }
+                        
                         htmlBuilder += `<li data-file-id="${f.id}" style="margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
-                             <a href="${f.url}" target="_blank" rel="noopener" style="word-break: break-all; margin-right: 10px;">📎 ${f.name}</a>`;
+                             ${linkHtml}`;
                         if ("{{ user.role }}" === "incubatee" || "{{ user.role }}" === "admin" || "{{ user.role }}" === "super_admin") {
                             htmlBuilder += `<button type="button" onclick="deleteFileAsync(${f.id}, 'incubatee')" style="background: none; border: none; color: var(--danger-color); cursor: pointer; font-weight: bold; padding: 0 5px; font-size: 16px;" title="Delete File">&times;</button>`;
                         }

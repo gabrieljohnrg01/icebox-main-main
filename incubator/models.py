@@ -131,6 +131,7 @@ class DeliverableFile(models.Model):
     deliverable = models.ForeignKey(Deliverable, on_delete=models.CASCADE, related_name='files')
     file = models.FileField(upload_to='deliverables/', blank=True, null=True)
     link_url = models.URLField(max_length=500, blank=True, null=True)
+    link_title = models.CharField(max_length=500, blank=True, null=True)
     text_content = models.TextField(blank=True, null=True)
     uploaded_by_role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     uploaded_at = models.DateTimeField(default=timezone.now)
@@ -194,6 +195,7 @@ class DeliverableTemplate(models.Model):
     requirements = models.TextField(blank=True, null=True)
     admin_file = models.FileField(upload_to='admin_templates/', null=True, blank=True)
     admin_link = models.URLField(max_length=500, blank=True, null=True)
+    admin_link_title = models.CharField(max_length=500, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -204,6 +206,7 @@ class DeliverableTemplateResource(models.Model):
     template = models.ForeignKey(DeliverableTemplate, on_delete=models.CASCADE, related_name='resources')
     file = models.FileField(upload_to='admin_templates/', blank=True, null=True)
     link = models.URLField(max_length=500, blank=True, null=True)
+    link_title = models.CharField(max_length=500, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):

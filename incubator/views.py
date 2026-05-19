@@ -13,8 +13,40 @@ from django.db.models import Count, Exists, OuterRef, Prefetch, Max, Q
 from django.shortcuts import HttpResponse
 from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
+import requests
+import re
+from bs4 import BeautifulSoup
+
+def get_link_title_safe(url):
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        r = requests.get(url, timeout=3, headers=headers)
+        if r.status_code == 200:
+            match = re.search(r'<title>(.*?)</title>', r.text, re.IGNORECASE)
+            if match:
+                return match.group(1).strip()[:490]
+    except Exception:
+        pass
+    return None
+
 
 from django.urls import reverse
+import requests
+import re
+from bs4 import BeautifulSoup
+
+def get_link_title_safe(url):
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        r = requests.get(url, timeout=3, headers=headers)
+        if r.status_code == 200:
+            match = re.search(r'<title>(.*?)</title>', r.text, re.IGNORECASE)
+            if match:
+                return match.group(1).strip()[:490]
+    except Exception:
+        pass
+    return None
+
 import json
 from .email_utils import send_deliverable_status_email
 
@@ -450,7 +482,8 @@ def attach_admin_file(request, deliverable_id):
         
         link_url = request.POST.get('link_url')
         if link_url:
-            DeliverableFile.objects.create(deliverable=deliverable, link_url=link_url, uploaded_by_role='admin')
+            link_title = get_link_title_safe(link_url)
+            DeliverableFile.objects.create(deliverable=deliverable, link_url=link_url, link_title=link_title, uploaded_by_role='admin')
             
         link = reverse('view_milestone', args=[deliverable.milestone.startup.id, deliverable.milestone.id])
         msg = f"Admin uploaded a file for '{deliverable.name}'"
@@ -486,7 +519,8 @@ def attach_incubatee_file(request, deliverable_id):
                 
         link_url = request.POST.get('link_url')
         if link_url:
-            DeliverableFile.objects.create(deliverable=deliverable, link_url=link_url, uploaded_by_role='incubatee')
+            link_title = get_link_title_safe(link_url)
+            DeliverableFile.objects.create(deliverable=deliverable, link_url=link_url, link_title=link_title, uploaded_by_role='incubatee')
             
         text_content = request.POST.get('text_content')
         if text_content:
@@ -749,14 +783,21 @@ def view_milestone(request, startup_id, milestone_id):
     for d in deliverables:
         rls_dict = {rl.name: {'incubatee': rl.incubatee_level, 'admin': rl.admin_level} for rl in d.readiness_levels.all()}
         comments = [{'user': c.user.username, 'content': c.content, 'date': c.created_at.strftime("%b %d, %Y %H:%M")} for c in d.comments.order_by('-created_at')]
-        admin_files = [{'id': f.id, 'url': f.file.url, 'name': f.file.name.split('/')[-1]} for f in d.files.filter(uploaded_by_role='admin') if f.file]
-        incubatee_files = [{'id': f.id, 'url': f.file.url, 'name': f.file.name.split('/')[-1]} for f in d.files.filter(uploaded_by_role='incubatee') if f.file]
+        admin_files = [{'id': f.id, 'url': f.file.url if f.file else f.link_url, 'name': f.file.name.split('/')[-1] if f.file else (f.link_title or f.link_url)} for f in d.files.filter(uploaded_by_role='admin') if f.file or f.link_url]
+        incubatee_files = [{'id': f.id, 'url': f.file.url if f.file else f.link_url, 'name': f.file.name.split('/')[-1] if f.file else (f.link_title or f.link_url), 'is_text': bool(f.text_content), 'text_content': f.text_content} for f in d.files.filter(uploaded_by_role='incubatee') if f.file or f.link_url or f.text_content]
         
         global_template_data = None
         if d.template and d.template.admin_file:
             global_template_data = {
                 'url': d.template.admin_file.url,
-                'name': d.template.admin_file.name.split('/')[-1]
+                'name': d.template.admin_file.name.split('/')[-1],
+                'type': 'file'
+            }
+        elif d.template and d.template.admin_link:
+            global_template_data = {
+                'url': d.template.admin_link,
+                'name': d.template.admin_link_title or get_link_title_safe(d.template.admin_link) or d.template.admin_link,
+                'type': 'link'
             }
             
         deliverables_data.append({
@@ -843,8 +884,10 @@ def edit_deliverable_page(request, deliverable_id):
         }
     
     global_template_link = None
+    global_template_link_title = None
     if deliverable.template and deliverable.template.admin_link:
         global_template_link = deliverable.template.admin_link
+        global_template_link_title = deliverable.template.admin_link_title or get_link_title_safe(global_template_link)
         
     context = {
         'startup': startup,
@@ -856,6 +899,7 @@ def edit_deliverable_page(request, deliverable_id):
         'rls_dict': json.dumps(rls_dict),
         'global_template_data': global_template_data,
         'global_template_link': global_template_link,
+        'global_template_link_title': global_template_link_title,
         'rl_types': ['TRL', 'CRL', 'BRL', 'FRL'],
     }
     return render(request, 'startups/edit_deliverable.html', context)
@@ -1254,6 +1298,8 @@ def edit_deliverable_template(request, template_id):
         
         if 'admin_link' in request.POST:
             dt.admin_link = request.POST.get('admin_link')
+            if dt.admin_link:
+                dt.admin_link_title = get_link_title_safe(dt.admin_link)
             
         dt.save()
 
