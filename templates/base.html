@@ -424,6 +424,10 @@
                     class="sidebar-link {% if request.resolver_match.url_name == 'startups_list' or request.resolver_match.url_name == 'add_startup' %}active{% endif %}">
                     <span class="sidebar-icon">🚀</span> Startups
                 </a>
+                <a href="{% url 'reports' %}"
+                    class="sidebar-link {% if 'report' in request.resolver_match.url_name %}active{% endif %}">
+                    <span class="sidebar-icon">📄</span> Reports
+                </a>
                 {% endif %}
 
             </nav>

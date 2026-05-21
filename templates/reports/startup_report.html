@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+
+{% block title %}Startup Report: {{ startup.name }}{% endblock %}
+
+{% block content %}
+<div class="mb-lg flex justify-between items-start">
+    <div>
+        <a href="{% url 'reports' %}" class="btn btn-ghost" style="margin-bottom: 0.5rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+            ← Back to Reports
+        </a>
+        <h1 class="heading-lg" style="margin-bottom: 0.5rem;">Startup Report: {{ startup.name }}</h1>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+            Generated on {% now "F j, Y" %}
+        </p>
+    </div>
+    <style>
+        .export-btn-container {
+            position: relative;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: flex-end;
+            height: 38px;
+        }
+        .export-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            z-index: 21;
+            border-radius: var(--radius-md);
+            transition: all 0.2s;
+        }
+        .export-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 8px;
+            width: 200px;
+            padding: 0.5rem;
+            border-radius: var(--radius-md);
+            z-index: 20;
+            flex-direction: column;
+            gap: 0.25rem;
+            background: #1E293B !important;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .export-menu.show {
+            display: flex;
+        }
+        .export-item {
+            background: transparent;
+            border: none;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            width: 100%;
+            font-size: 0.95rem;
+            font-family: inherit;
+        }
+        .export-item:hover {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-primary);
+        }
+    </style>
+    <div class="export-btn-container">
+        <button id="export-btn-trigger" onclick="toggleExportMenu()" class="btn btn-primary export-btn">
+            📤 Export Report <span style="font-size: 0.8em;">▼</span>
+        </button>
+        <div id="export-dropdown" class="export-menu">
+            <a href="{% url 'startup_report_pdf' %}?startup_id={{ startup.id }}" onclick="document.getElementById('export-dropdown').classList.remove('show'); document.getElementById('export-btn-trigger').classList.remove('active');" class="export-item">
+                📄 Export as PDF
+            </a>
+            <a href="{% url 'startup_report_docx' %}?startup_id={{ startup.id }}" onclick="document.getElementById('export-dropdown').classList.remove('show'); document.getElementById('export-btn-trigger').classList.remove('active');" class="export-item">
+                📝 Export as DOCX
+            </a>
+            <a href="{% url 'startup_report_csv' %}?startup_id={{ startup.id }}" onclick="document.getElementById('export-dropdown').classList.remove('show'); document.getElementById('export-btn-trigger').classList.remove('active');" class="export-item">
+                📊 Export as CSV
+            </a>
+        </div>
+    </div>
+    <script>
+        function toggleExportMenu() {
+            const menu = document.getElementById('export-dropdown');
+            const btn = document.getElementById('export-btn-trigger');
+            menu.classList.toggle('show');
+            btn.classList.toggle('active');
+        }
+        // Close menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const container = document.querySelector('.export-btn-container');
+            if (!container.contains(event.target)) {
+                document.getElementById('export-dropdown').classList.remove('show');
+                document.getElementById('export-btn-trigger').classList.remove('active');
+            }
+        });
+    </script>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- Startup Details -->
+    <div class="glass-container" style="padding: 1.5rem; border-radius: var(--radius-lg);">
+        <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+            Profile Information
+        </h2>
+        <div style="display: grid; grid-template-columns: 120px 1fr; gap: 0.75rem; font-size: 0.9rem;">
+
+            
+            <strong style="color: var(--text-secondary);">Cohort:</strong>
+            <span>{{ startup.cohort.name|default:"Unassigned" }}</span>
+
+
+
+            <strong style="color: var(--text-secondary);">Team Size:</strong>
+            <span>{{ startup.team_size }} member{{ startup.team_size|pluralize }}</span>
+
+            <strong style="color: var(--text-secondary);">Latest Milestone:</strong>
+            <span>{{ startup.latest_milestone }}</span>
+
+            <strong style="color: var(--text-secondary);">Overall Progress:</strong>
+            <span style="color: var(--accent-color); font-weight: 700;">{{ startup.progress }}%</span>
+
+            <strong style="color: var(--text-secondary);">Total Revisions:</strong>
+            <span>{{ total_revisions }} file{{ total_revisions|pluralize }}</span>
+        </div>
+    </div>
+
+    <!-- Current Readiness Levels -->
+    <div class="glass-container" style="padding: 1.5rem; border-radius: var(--radius-lg);">
+        <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+            Current Readiness Levels
+        </h2>
+        {% if latest_rls %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
+            {% for rl_name, level in latest_rls.items %}
+            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-md); text-align: center; border: 1px solid var(--border-color);">
+                <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem;">{{ rl_name }}</div>
+                <div style="font-size: 1.4rem; font-weight: 700; color: var(--accent-color);">{{ level }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color: var(--text-tertiary); font-size: 0.9rem; font-style: italic;">No readiness levels assigned yet.</p>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<!-- Team Members -->
+<div class="glass-container" style="padding: 1.5rem; border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
+    <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+        Team Members
+    </h2>
+    {% if members_with_roles %}
+    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+        <thead>
+            <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-secondary);">
+                <th style="padding: 1rem 0.5rem; font-weight: 600;">Name</th>
+                <th style="padding: 1rem 0.5rem; font-weight: 600;">Role</th>
+                <th style="padding: 1rem 0.5rem; font-weight: 600;">Email</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for member in members_with_roles %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 1rem 0.5rem; font-weight: 600;">{{ member.user.get_full_name|default:member.user.username }}</td>
+                <td style="padding: 1rem 0.5rem;">{{ member.role|default:"Member" }}</td>
+                <td style="padding: 1rem 0.5rem; color: var(--text-secondary);">{{ member.user.email|default:"--" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--text-tertiary); font-size: 0.9rem; font-style: italic;">No members found.</p>
+    {% endif %}
+</div>
+
+<!-- Past Due Items -->
+{% if past_due_items %}
+<div class="glass-container" style="padding: 1.5rem; border-radius: var(--radius-lg); margin-bottom: 1.5rem; border-left: 4px solid var(--danger-color);">
+    <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);">⚠️ Past Deadline Items</h2>
+    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+        <thead>
+            <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary);">
+                <th style="padding: 0.5rem;">Type</th>
+                <th style="padding: 0.5rem;">Name</th>
+                <th style="padding: 0.5rem;">Due Date</th>
+                <th style="padding: 0.5rem;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in past_due_items %}
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 0.5rem;">{{ item.type }}</td>
+                <td style="padding: 0.5rem;">{{ item.name }}</td>
+                <td style="padding: 0.5rem; color: var(--danger-color); font-weight: 600;">{{ item.due_date|date:"M d, Y" }}</td>
+                <td style="padding: 0.5rem;">{{ item.status }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Milestones Breakdown -->
+<div class="glass-container" style="padding: 1.5rem; border-radius: var(--radius-lg);">
+    <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);">Milestone Breakdown</h2>
+    
+    <div class="timeline-container">
+        {% for m in milestones %}
+        <div style="padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 1rem; background: {% if m.status == 'completed' %}rgba(40, 167, 69, 0.05){% elif m.status == 'pending' %}rgba(41, 145, 239, 0.05){% else %}var(--bg-secondary){% endif %};">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                <h3 style="font-size: 1.1rem; font-weight: 600;">{{ m.title|default:"Milestone" }} (Progress: {{ m.milestone_progress }})</h3>
+                <span class="badge" style="
+                    {% if m.status == 'completed' %}background: var(--success-color); color: white;
+                    {% elif m.status == 'pending' %}background: var(--accent-color); color: white;
+                    {% else %}background: var(--text-tertiary); color: white;{% endif %}
+                    padding: 0.25rem 0.6rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+                ">{{ m.get_status_display }}</span>
+            </div>
+
+            {% if m.deliverables.count > 0 %}
+            <table style="width: 100%; font-size: 0.85rem; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+                        <th style="padding: 0.5rem;">Deliverable</th>
+                        <th style="padding: 0.5rem;">Status</th>
+                        <th style="padding: 0.5rem;">Due Date</th>
+                        <th style="padding: 0.5rem;">Uploaded At</th>
+                        <th style="padding: 0.5rem;">Revisions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in m.deliverables.all %}
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 0.5rem; font-weight: 500;">{{ d.name }}</td>
+                        <td style="padding: 0.5rem;">
+                            <span style="
+                                {% if d.status == 'approved' %}color: var(--success-color);
+                                {% elif d.status == 'rejected' %}color: var(--danger-color);
+                                {% else %}color: var(--warning-color);{% endif %}
+                                font-weight: 600; text-transform: uppercase; font-size: 0.7rem;
+                            ">{{ d.get_status_display }}</span>
+                        </td>
+                        <td style="padding: 0.5rem; color: var(--text-secondary);">{{ d.due_date|date:"M d, Y"|default:"--" }}</td>
+                        <td style="padding: 0.5rem; color: var(--text-secondary);">{{ d.uploaded_at|date:"M d, Y" }}</td>
+                        <td style="padding: 0.5rem; color: var(--text-secondary);">{{ d.files.all|length }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="font-size: 0.85rem; color: var(--text-tertiary); margin: 0;">No deliverables associated with this milestone.</p>
+            {% endif %}
+
+        </div>
+        {% empty %}
+        <p style="color: var(--text-tertiary);">No milestones assigned yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        .main-content, .main-content * {
+            visibility: visible;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
+        .main-content {
+            position: absolute;
+            left: 0;
+            top: 0;
+            margin-left: 0;
+            width: 100%;
+        }
+        .btn, .sidebar, .topbar {
+            display: none !important;
+        }
+        .glass-container {
+            background: white !important;
+            color: black !important;
+            border: 1px solid #ccc !important;
+        }
+        * {
+            color: black !important;
+        }
+    }
+</style>
+{% endblock %}

@@ -46,4 +46,21 @@ urlpatterns = [
     path('settings/cohorts/add/', views.add_cohort, name='add_cohort'),
     path('settings/cohorts/<int:cohort_id>/edit/', views.edit_cohort, name='edit_cohort'),
     path('settings/cohorts/<int:cohort_id>/delete/', views.delete_cohort, name='delete_cohort'),
+    path('settings/rltemplates/add/', views.add_rltemplate, name='add_rltemplate'),
+    path('settings/rltemplates/<int:template_id>/edit/', views.edit_rltemplate, name='edit_rltemplate'),
+    path('settings/rltemplates/<int:template_id>/delete/', views.delete_rltemplate, name='delete_rltemplate'),
+    path('settings/rltemplates/levels/add/', views.add_rltemplate_level, name='add_rltemplate_level'),
+    path('settings/rltemplates/levels/<int:level_id>/edit/', views.edit_rltemplate_level, name='edit_rltemplate_level'),
+    path('settings/rltemplates/levels/<int:level_id>/delete/', views.delete_rltemplate_level, name='delete_rltemplate_level'),
+    
+    # Reports
+    path('reports/', views.reports_view, name='reports'),
+    path('reports/cohort/', views.cohort_report, name='cohort_report'),
+    path('reports/startup/', views.startup_report, name='startup_report'),
+    path('reports/cohort/csv/', views.cohort_report_csv, name='cohort_report_csv'),
+    path('reports/cohort/docx/', views.cohort_report_docx, name='cohort_report_docx'),
+    path('reports/startup/csv/', views.startup_report_csv, name='startup_report_csv'),
+    path('reports/startup/docx/', views.startup_report_docx, name='startup_report_docx'),
+    path('reports/cohort/pdf/', views.cohort_report_pdf, name='cohort_report_pdf'),
+    path('reports/startup/pdf/', views.startup_report_pdf, name='startup_report_pdf'),
 ]

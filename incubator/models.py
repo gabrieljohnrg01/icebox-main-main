@@ -26,17 +26,11 @@ class Cohort(models.Model):
         return self.name
 
 class Startup(models.Model):
-    STAGE_CHOICES = (
-        ('ideation', 'Ideation'),
-        ('validation', 'Validation'),
-        ('scaling', 'Scaling'),
-    )
 
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True, null=True)
     logo = models.ImageField(upload_to='startup_logos/', blank=True, null=True)
-    industry = models.CharField(max_length=100, blank=True, null=True)
-    stage = models.CharField(max_length=50, choices=STAGE_CHOICES, default='ideation')
+
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_startups')
     email = models.EmailField(max_length=120, blank=True, null=True)
     contact_number = models.CharField(max_length=20, blank=True, null=True)
@@ -228,3 +222,22 @@ class FBAnnouncement(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class RLTemplate(models.Model):
+    name = models.CharField(max_length=50, help_text="e.g. TRL, MRL, SRL")
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return self.name
+
+class RLTemplateLevel(models.Model):
+    template = models.ForeignKey(RLTemplate, on_delete=models.CASCADE, related_name='levels')
+    level = models.IntegerField()
+    description = models.TextField()
+
+    class Meta:
+        ordering = ['level']
+
+    def __str__(self):
+        return f"{self.template.name} - Level {self.level}"

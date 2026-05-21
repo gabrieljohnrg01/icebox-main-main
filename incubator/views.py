@@ -4,7 +4,7 @@ from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
-from .models import User, Startup, StartupMember, ProgressReport, Milestone, Deliverable, DeliverableFile, Readiness, Comment, Notification, MilestoneTemplate, DeliverableTemplate, FBAnnouncement, Cohort
+from .models import User, Startup, StartupMember, ProgressReport, Milestone, Deliverable, DeliverableFile, Readiness, Comment, Notification, MilestoneTemplate, DeliverableTemplate, FBAnnouncement, Cohort, RLTemplate, RLTemplateLevel
 from django.contrib.auth.forms import PasswordChangeForm
 from django.utils import translation
 from django.conf import settings
@@ -16,6 +16,21 @@ from django.urls import reverse
 import requests
 import re
 from bs4 import BeautifulSoup
+import csv
+import base64
+import os
+from django.conf import settings
+
+def _get_img_src(request, rel_url, for_pdf=False):
+    try:
+        if for_pdf:
+            rel = rel_url.lstrip('/')
+            return os.path.join(settings.BASE_DIR, rel)
+        else:
+            if not rel_url.startswith('/'): rel_url = '/' + rel_url
+            return request.build_absolute_uri(rel_url)
+    except Exception:
+        return ""
 
 def get_link_title_safe(url):
     try:
@@ -257,7 +272,15 @@ def admin_dashboard(request):
 def incubatee_dashboard(request):
     startups = request.user.startups.prefetch_related('milestones__deliverables').all()
 
-    if startups.exists():
+    # Pre-calculate current milestone for each startup
+    for startup in startups:
+        startup.current_milestone = None
+        for milestone in startup.milestones.all().order_by('milestone_progress'):
+            if milestone.status != 'completed' and not milestone.is_locked():
+                startup.current_milestone = milestone
+                break
+
+    if startups.count() == 1:
         return redirect('view_startup', startup_id=startups.first().id)
 
     context = {'startups': startups}
@@ -336,9 +359,30 @@ def delete_startup(request, startup_id):
         return redirect('dashboard')
         
     startup = get_object_or_404(Startup, id=startup_id)
+    
+    # Collect users to potentially delete
+    users_to_check = set()
+    if startup.owner:
+        users_to_check.add(startup.owner)
+    for member in startup.members.all():
+        users_to_check.add(member)
+        
+    users_to_delete = []
+    for u in users_to_check:
+        if u.role == 'incubatee':
+            other_owned = u.owned_startups.exclude(id=startup_id).exists()
+            other_member = u.startups.exclude(id=startup_id).exists()
+            if not other_owned and not other_member:
+                users_to_delete.append(u)
+                
+    startup_name = startup.name
     startup.delete()
-    messages.success(request, f'Startup {startup.name} deleted.')
-    return redirect('dashboard')
+    
+    for u in users_to_delete:
+        u.delete()
+        
+    messages.success(request, f'Startup {startup_name} deleted. {len(users_to_delete)} orphaned member accounts were also cleaned up.')
+    return redirect('startups_list')
 
 @login_required
 def add_startup(request):
@@ -584,28 +628,45 @@ def add_member(request, startup_id):
     if request.method == 'POST':
         form = StartupMemberForm(request.POST)
 
-        if User.objects.filter(last_name=lastname).exists() and User.objects.filter(first_name=first_name).exists() and User.objects.filter(middle_name=middle_name).exists():
-            existsname = f"{first_name} {middle_name} {lastname}"
-            messages.error(request, f'A user with this {existsname} already exists. Please modify the last name to create a unique username.')
-            return redirect('add_member', startup_id=startup.id)
-    
-        if User.objects.filter(email=email_exist).exists():
-            messages.error(request, 'A user with this email already exists.')
-            return redirect('add_member', startup_id=startup.id)
-
-    
-        if User.objects.filter(contact_number=number).exists():
-            messages.error(request, 'A user with this contact number already exists.')
-            return redirect('add_member', startup_id=startup.id)
-        
         if form.is_valid():
-            # Extract data
-            first_name = form.cleaned_data['first_name']
-            middle_name = form.cleaned_data['middle_name']
-            last_name = form.cleaned_data['last_name']
+            email_exist = form.cleaned_data['email']
+            existing_user = User.objects.filter(email=email_exist).first()
+            
             position = form.cleaned_data['position']
-            email = form.cleaned_data['email']
-            contact = form.cleaned_data['contact_number']
+            
+            if existing_user:
+                if existing_user.role != 'incubatee':
+                    messages.error(request, 'Cannot add an admin account as a startup member.')
+                    return redirect('add_member', startup_id=startup.id)
+                    
+                if StartupMember.objects.filter(startup=startup, user=existing_user).exists():
+                    messages.error(request, 'This user is already a member of this startup.')
+                    return redirect('add_member', startup_id=startup.id)
+                    
+                # Link existing user
+                StartupMember.objects.create(startup=startup, user=existing_user, role=position)
+                messages.success(request, f'Existing member {existing_user.get_full_name() or existing_user.username} linked to {startup.name} successfully!')
+                
+                action = request.POST.get('action')
+                if action == 'save_and_add_another':
+                    return redirect('add_member', startup_id=startup.id)
+                else:
+                    return redirect('view_startup', startup_id=startup.id)
+            
+            # If we reach here, it's a new user. 
+            first_name = form.cleaned_data.get('first_name')
+            middle_name = form.cleaned_data.get('middle_name', '')
+            last_name = form.cleaned_data.get('last_name')
+            contact = form.cleaned_data.get('contact_number')
+            email = form.cleaned_data.get('email')
+            
+            if not first_name or not last_name or not contact:
+                messages.error(request, 'First Name, Last Name, and Contact Number are required to create a new user.')
+                return redirect('add_member', startup_id=startup.id)
+
+            if User.objects.filter(contact_number=contact).exists():
+                messages.error(request, 'A user with this contact number already exists. Please use their registered email to link their account.')
+                return redirect('add_member', startup_id=startup.id)
             
             # Generate Username: lastname.firstname
             base_username = f"{last_name.lower()}.{first_name.lower()}".replace(" ", "")
@@ -670,24 +731,15 @@ def delete_member(request, startup_id, member_id):
     # Delete membership record
     membership.delete()
 
-    # Optionally delete the user account as well (only incubatee accounts)
-    if request.method == 'POST' and request.POST.get('delete_account'):
-        # Only allow deleting incubatee accounts via this action
-        if user.role != 'incubatee':
-            messages.error(request, 'Can only delete incubatee accounts via this action.')
+    # Automatically clean up the user account if they are an orphaned incubatee
+    if user.role == 'incubatee':
+        other_owned = user.owned_startups.exists()
+        other_member = user.startups.exists()
+        if not other_owned and not other_member:
+            username_display = user.get_full_name() or user.username
+            user.delete()
+            messages.success(request, f'Member {username_display} removed and orphaned account automatically deleted.')
             return redirect('view_startup', startup_id=startup.id)
-
-        # If the user is still a member of other startups, prevent accidental deletion
-        other_memberships = StartupMember.objects.filter(user=user).exists()
-        if other_memberships:
-            messages.error(request, 'User is a member of other startups; cannot delete account here. Remove other memberships first or delete the account from the admin panel.')
-            return redirect('view_startup', startup_id=startup.id)
-
-        # Safe to delete the user
-        username_display = user.get_full_name() or user.username
-        user.delete()
-        messages.success(request, f'Account {username_display} deleted and removed from {startup.name}.')
-        return redirect('view_startup', startup_id=startup.id)
 
     messages.success(request, f'Member {user.get_full_name() or user.username} removed from {startup.name}.')
     return redirect('view_startup', startup_id=startup.id)
@@ -809,11 +861,22 @@ def view_milestone(request, startup_id, milestone_id):
             'global_template_file_json': json.dumps(global_template_data) if global_template_data else "null"
         })
 
+    rl_templates_db = RLTemplate.objects.all().prefetch_related('levels').order_by('id')
+    rl_data = {}
+    for rlt in rl_templates_db:
+        rl_data[rlt.name] = {}
+        for lvl in rlt.levels.all():
+            rl_data[rlt.name][str(lvl.level)] = {
+                'description': lvl.description
+            }
+    
     context = {
         'startup': startup,
         'milestone': milestone,
         'deliverables_data': deliverables_data,
         'is_locked': is_locked,
+        'rl_templates': rl_templates_db,
+        'rl_data_json': json.dumps(rl_data),
     }
     return render(request, 'startups/view_milestone.html', context)
 
@@ -889,6 +952,17 @@ def edit_deliverable_page(request, deliverable_id):
         global_template_link = deliverable.template.admin_link
         global_template_link_title = deliverable.template.admin_link_title or get_link_title_safe(global_template_link)
         
+    rl_templates_db = RLTemplate.objects.all().prefetch_related('levels')
+    rl_data = {}
+    rl_types = []
+    for rlt in rl_templates_db:
+        rl_types.append(rlt.name)
+        rl_data[rlt.name] = {}
+        for lvl in rlt.levels.all():
+            rl_data[rlt.name][str(lvl.level)] = {
+                'description': lvl.description
+            }
+
     context = {
         'startup': startup,
         'milestone': milestone,
@@ -900,7 +974,8 @@ def edit_deliverable_page(request, deliverable_id):
         'global_template_data': global_template_data,
         'global_template_link': global_template_link,
         'global_template_link_title': global_template_link_title,
-        'rl_types': ['TRL', 'CRL', 'BRL', 'FRL'],
+        'rl_types': rl_types,
+        'rl_data_json': json.dumps(rl_data),
     }
     return render(request, 'startups/edit_deliverable.html', context)
 
@@ -931,7 +1006,7 @@ def update_deliverable_details(request, deliverable_id):
             for recipient in recipients:
                 Notification.objects.create(recipient=recipient, message=msg, link=link)
             # Handle Readiness Level Checkboxes (Admin sets requirement)
-            rl_types = ['TRL', 'CRL', 'BRL', 'FRL']
+            rl_types = RLTemplate.objects.values_list('name', flat=True)
             for rl_type in rl_types:
                 is_checked = request.POST.get(f'{rl_type.lower()}_checked') == 'on'
                 
@@ -950,7 +1025,7 @@ def update_deliverable_details(request, deliverable_id):
             if action == 'revision':
                 deliverable.status = 'rejected'
                 messages.warning(request, f'Revision requested for {deliverable.name}.')
-                comment_text = request.POST.get('comment', '').strip()
+                comment_text = (request.POST.get('revision_comment') or request.POST.get('comment') or '').strip()
                 if comment_text:
                     comment_text = f"⚠️ REVISION REQUESTED:\n{comment_text}"
                 
@@ -978,7 +1053,7 @@ def update_deliverable_details(request, deliverable_id):
             elif action == 'done':
                 deliverable.status = 'approved'
                 messages.success(request, f'Deliverable {deliverable.name} approved.')
-                comment_text = request.POST.get('comment', '').strip()
+                comment_text = (request.POST.get('revision_comment') or request.POST.get('comment') or '').strip()
                 if comment_text:
                     comment_text = f"✅ DELIVERABLE APPROVED:\n{comment_text}"
                 # Send email notification to incubatees
@@ -1031,7 +1106,7 @@ def update_deliverable_details(request, deliverable_id):
         if not messages.get_messages(request):
             messages.success(request, 'Deliverable details updated successfully.')
             
-    return redirect('view_milestone', startup_id=startup_id, milestone_id=milestone_id)
+    return redirect('edit_deliverable_page', deliverable_id=deliverable.id)
 
 @login_required
 def set_password(request):
@@ -1127,12 +1202,14 @@ def settings_view(request):
     # Admin global templates
     milestone_templates = MilestoneTemplate.objects.all().order_by('milestone_progress') if is_admin else None
     cohorts = Cohort.objects.all().order_by('-start_date') if user.role == 'super_admin' else None
+    rl_templates = RLTemplate.objects.all().prefetch_related('levels') if user.role == 'super_admin' else None
 
     context = {
         'is_admin': is_admin,
         'password_form': password_form,
         'milestone_templates': milestone_templates,
         'cohorts': cohorts,
+        'rl_templates': rl_templates,
     }
     return render(request, 'settings/index.html', context)
 
@@ -1365,3 +1442,586 @@ def delete_cohort(request, cohort_id):
         messages.success(request, 'Cohort deleted successfully.')
         
     return redirect('settings')
+
+@login_required
+def add_rltemplate(request):
+    if request.user.role != 'super_admin':
+        return HttpResponse('Unauthorized', status=403)
+        
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        try:
+            RLTemplate.objects.create(name=name)
+            messages.success(request, 'RL Template added successfully.')
+        except Exception as e:
+            messages.error(request, f'Failed to add RL Template: {str(e)}')
+            
+    return redirect('settings')
+
+@login_required
+def edit_rltemplate(request, template_id):
+    if request.user.role != 'super_admin':
+        return HttpResponse('Unauthorized', status=403)
+        
+    if request.method == 'POST':
+        rltemplate = get_object_or_404(RLTemplate, id=template_id)
+        rltemplate.name = request.POST.get('name', rltemplate.name)
+        rltemplate.save()
+        messages.success(request, 'RL Template updated successfully.')
+        
+    return redirect('settings')
+
+@login_required
+def delete_rltemplate(request, template_id):
+    if request.user.role != 'super_admin':
+        return HttpResponse('Unauthorized', status=403)
+        
+    if request.method == 'POST':
+        rltemplate = get_object_or_404(RLTemplate, id=template_id)
+        rltemplate.delete()
+        messages.success(request, 'RL Template deleted successfully.')
+        
+    return redirect('settings')
+
+@login_required
+def add_rltemplate_level(request):
+    if request.user.role != 'super_admin':
+        return HttpResponse('Unauthorized', status=403)
+        
+    if request.method == 'POST':
+        template_id = request.POST.get('template_id')
+        level = request.POST.get('level')
+        description = request.POST.get('description')
+        
+        try:
+            rltemplate = get_object_or_404(RLTemplate, id=template_id)
+            RLTemplateLevel.objects.create(
+                template=rltemplate,
+                level=level,
+                description=description
+            )
+            messages.success(request, 'RL Level added successfully.')
+        except Exception as e:
+            messages.error(request, f'Failed to add RL Level: {str(e)}')
+            
+    return redirect('settings')
+
+@login_required
+def edit_rltemplate_level(request, level_id):
+    if request.user.role != 'super_admin':
+        return HttpResponse('Unauthorized', status=403)
+        
+    if request.method == 'POST':
+        rl_level = get_object_or_404(RLTemplateLevel, id=level_id)
+        rl_level.level = request.POST.get('level', rl_level.level)
+        rl_level.description = request.POST.get('description', rl_level.description)
+        rl_level.save()
+        messages.success(request, 'RL Level updated successfully.')
+        
+    return redirect('settings')
+
+@login_required
+def delete_rltemplate_level(request, level_id):
+    if request.user.role != 'super_admin':
+        return HttpResponse('Unauthorized', status=403)
+        
+    if request.method == 'POST':
+        rl_level = get_object_or_404(RLTemplateLevel, id=level_id)
+        rl_level.delete()
+        messages.success(request, 'RL Level deleted successfully.')
+        
+    return redirect('settings')
+
+@login_required
+def reports_view(request):
+    if request.user.role not in ['admin', 'super_admin']:
+        messages.error(request, 'Unauthorized access to Reports.')
+        return redirect('dashboard')
+    cohorts = Cohort.objects.all().order_by('-start_date')
+    startups = Startup.objects.all().select_related('cohort').order_by('name')
+    return render(request, 'reports/index.html', {'cohorts': cohorts, 'startups': startups})
+
+@login_required
+def cohort_report(request):
+    from datetime import date
+    if request.user.role not in ['admin', 'super_admin']:
+        messages.error(request, 'Unauthorized access to Reports.')
+        return redirect('dashboard')
+    cohort_id = request.GET.get('cohort_id')
+    if not cohort_id:
+        return redirect('reports')
+    cohort = get_object_or_404(Cohort, id=cohort_id)
+    startups = cohort.startups.prefetch_related('milestones__deliverables', 'members').all()
+    
+    total_startups = startups.count()
+
+    
+    total_members = 0
+    total_progress = 0
+    past_due_items = []
+    today = date.today()
+    
+    for s in startups:
+        s.current_progress = s.progress
+        total_progress += s.current_progress
+        s.team_size = s.members.count()
+        total_members += s.team_size
+        
+        completed_milestones = s.milestones.filter(status='completed').order_by('-milestone_progress')
+        s.latest_milestone = completed_milestones.first().title if completed_milestones.exists() else "None"
+        
+        for m in s.milestones.filter(status__in=['not-yet', 'pending']):
+            if m.due_date and m.due_date < today:
+                past_due_items.append({'startup': s.name, 'type': 'Milestone', 'name': m.title, 'due_date': m.due_date, 'status': m.get_status_display()})
+                
+        for m in s.milestones.all():
+            for d in m.deliverables.filter(status__in=['pending', 'rejected']):
+                if d.due_date and d.due_date < today:
+                    past_due_items.append({'startup': s.name, 'type': 'Deliverable', 'name': d.name, 'due_date': d.due_date, 'status': d.get_status_display()})
+                    
+    avg_progress = int(total_progress / total_startups) if total_startups > 0 else 0
+    
+    return render(request, 'reports/cohort_report.html', {
+        'cohort': cohort,
+        'startups': startups,
+        'total_startups': total_startups,
+        'avg_progress': avg_progress,
+        'total_members': total_members,
+
+        'past_due_items': past_due_items
+    })
+
+@login_required
+def startup_report(request):
+    from datetime import date
+    if request.user.role not in ['admin', 'super_admin']:
+        messages.error(request, 'Unauthorized access to Reports.')
+        return redirect('dashboard')
+    startup_id = request.GET.get('startup_id')
+    if not startup_id:
+        return redirect('reports')
+    startup = get_object_or_404(Startup, id=startup_id)
+    milestones = startup.milestones.prefetch_related('deliverables__readiness_levels', 'deliverables__files').order_by('milestone_progress')
+    
+    startup.team_size = startup.members.count()
+    completed_milestones = milestones.filter(status='completed').order_by('-milestone_progress')
+    startup.latest_milestone = completed_milestones.first().title if completed_milestones.exists() else "None"
+    
+    rl_dict = {}
+    past_due_items = []
+    today = date.today()
+    total_revisions = 0
+    
+    for m in milestones:
+        if m.status in ['not-yet', 'pending'] and m.due_date and m.due_date < today:
+            past_due_items.append({'type': 'Milestone', 'name': m.title, 'due_date': m.due_date, 'status': m.get_status_display()})
+            
+        for d in m.deliverables.all():
+            if d.status in ['pending', 'rejected'] and d.due_date and d.due_date < today:
+                past_due_items.append({'type': 'Deliverable', 'name': d.name, 'due_date': d.due_date, 'status': d.get_status_display()})
+            total_revisions += d.files.count()
+            for r in d.readiness_levels.all():
+                if r.admin_level:
+                    rl_dict[r.name] = r.admin_level
+                    
+    members_with_roles = startup.startupmember_set.select_related('user').all()
+                    
+    return render(request, 'reports/startup_report.html', {
+        'startup': startup,
+        'milestones': milestones,
+        'latest_rls': rl_dict,
+        'past_due_items': past_due_items,
+        'total_revisions': total_revisions,
+        'members_with_roles': members_with_roles
+    })
+
+@login_required
+def cohort_report_csv(request):
+    if request.user.role not in ['admin', 'super_admin']:
+        return HttpResponse("Unauthorized", status=403)
+    cohort_id = request.GET.get('cohort_id')
+    if not cohort_id:
+        return HttpResponse("No cohort specified", status=400)
+    cohort = get_object_or_404(Cohort, id=cohort_id)
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="cohort_{cohort.id}_report.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['Cohort Name', cohort.name])
+    if cohort.start_date:
+        writer.writerow(['Start Date', cohort.start_date.strftime('%Y-%m-%d')])
+    writer.writerow([])
+    
+    startups = cohort.startups.prefetch_related('milestones__deliverables', 'members').all()
+    for idx, s in enumerate(startups, 1):
+        writer.writerow([f'--- STARTUP {idx} REPORT ---'])
+        writer.writerow(['Startup Name', s.name])
+        writer.writerow(['Description', s.description or '--'])
+        s.team_size = s.members.count()
+        writer.writerow(['Team Size', s.team_size])
+        writer.writerow(['Overall Progress (%)', s.progress])
+        
+        milestones = s.milestones.prefetch_related('deliverables__files', 'deliverables__comments__user').order_by('milestone_progress')
+        total_revisions = sum(d.files.count() for m in milestones for d in m.deliverables.all())
+        writer.writerow(['Total Revisions', total_revisions])
+        
+        if s.progress == 100:
+            last_milestone = s.milestones.filter(status='completed').order_by('-completed_at').first()
+            if last_milestone and last_milestone.completed_at:
+                writer.writerow(['Completed At', last_milestone.completed_at.strftime('%Y-%m-%d')])
+        
+        writer.writerow([])
+        
+        writer.writerow(['Team Members'])
+        writer.writerow(['Name', 'Role', 'Email'])
+        for member in s.startupmember_set.select_related('user').all():
+            name = member.user.get_full_name() or member.user.username
+            role = member.role or "Member"
+            email = member.user.email or "--"
+            writer.writerow([name, role, email])
+        writer.writerow([])
+        
+        writer.writerow(['Milestone', 'Deliverable', 'Status', 'Due Date', 'Uploaded At', 'Revisions', 'Admin Notes'])
+        for m in milestones:
+            for d in m.deliverables.all():
+                due = d.due_date.strftime('%Y-%m-%d') if d.due_date else '--'
+                uploaded = d.uploaded_at.strftime('%Y-%m-%d') if d.uploaded_at else '--'
+                revs = len(d.files.all())
+                admin_notes = [c.content for c in d.comments.all() if c.user.role in ['admin', 'super_admin']]
+                notes_str = " | ".join(admin_notes) if admin_notes else "--"
+                writer.writerow([m.title, d.name, d.get_status_display(), due, uploaded, revs, notes_str])
+        writer.writerow([])
+        writer.writerow([])
+        
+    return response
+
+@login_required
+def startup_report_csv(request):
+    if request.user.role not in ['admin', 'super_admin']:
+        return HttpResponse("Unauthorized", status=403)
+    startup_id = request.GET.get('startup_id')
+    if not startup_id:
+        return HttpResponse("No startup specified", status=400)
+    startup = get_object_or_404(Startup, id=startup_id)
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="startup_{startup.id}_report.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['Startup Name', startup.name])
+    writer.writerow(['Description', startup.description or '--'])
+    cohort_name = startup.cohort.name if startup.cohort else 'Unassigned'
+    writer.writerow(['Cohort', cohort_name])
+    team_size = startup.members.count()
+    writer.writerow(['Team Size', team_size])
+    writer.writerow(['Overall Progress (%)', startup.progress])
+    
+    milestones = startup.milestones.prefetch_related('deliverables__files', 'deliverables__comments__user').order_by('milestone_progress')
+    total_revisions = sum(d.files.count() for m in milestones for d in m.deliverables.all())
+    writer.writerow(['Total Revisions', total_revisions])
+    
+    if startup.progress == 100:
+        last_milestone = startup.milestones.filter(status='completed').order_by('-completed_at').first()
+        if last_milestone and last_milestone.completed_at:
+            writer.writerow(['Completed At', last_milestone.completed_at.strftime('%Y-%m-%d')])
+    
+    writer.writerow([])
+    
+    writer.writerow(['Team Members'])
+    writer.writerow(['Name', 'Role', 'Email'])
+    for member in startup.startupmember_set.select_related('user').all():
+        name = member.user.get_full_name() or member.user.username
+        role = member.role or "Member"
+        email = member.user.email or "--"
+        writer.writerow([name, role, email])
+    writer.writerow([])
+    
+    writer.writerow(['Milestone', 'Deliverable', 'Status', 'Due Date', 'Uploaded At', 'Revisions', 'Admin Notes'])
+    for m in milestones:
+        for d in m.deliverables.all():
+            due = d.due_date.strftime('%Y-%m-%d') if d.due_date else '--'
+            uploaded = d.uploaded_at.strftime('%Y-%m-%d') if d.uploaded_at else '--'
+            revs = len(d.files.all())
+            admin_notes = [c.content for c in d.comments.all() if c.user.role in ['admin', 'super_admin']]
+            notes_str = " | ".join(admin_notes) if admin_notes else "--"
+            writer.writerow([m.title, d.name, d.get_status_display(), due, uploaded, revs, notes_str])
+            
+    return response
+
+REPORT_STYLE = """
+<style>
+    @page { size: a4 portrait; margin: 1cm; }
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; color: #333333; }
+    h1 { color: #2C3E50; border-bottom: 2px solid #2C3E50; padding-bottom: 5px; font-size: 18pt; text-align: center; margin-bottom: 20px;}
+    h2 { color: #2980B9; border-bottom: 1px solid #BDC3C7; font-size: 14pt; margin-top: 20px; padding-bottom: 3px; }
+    h3 { color: #34495E; font-size: 12pt; margin-top: 15px; }
+    p { margin: 5px 0; line-height: 1.4; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }
+    th { background-color: #ECF0F1; color: #2C3E50; font-weight: bold; text-align: left; padding: 6px; border: 1px solid #BDC3C7; }
+    td { padding: 6px; border: 1px solid #BDC3C7; }
+    hr { border: 0; border-top: 1px solid #BDC3C7; margin: 20px 0; }
+</style>
+"""
+
+@login_required
+def cohort_report_docx(request, for_pdf=False):
+    if request.user.role not in ['admin', 'super_admin']:
+        return HttpResponse("Unauthorized", status=403)
+    cohort_id = request.GET.get('cohort_id')
+    if not cohort_id:
+        return HttpResponse("No cohort specified", status=400)
+    cohort = get_object_or_404(Cohort, id=cohort_id)
+    
+    startups = cohort.startups.prefetch_related('milestones__deliverables', 'members').all()
+    for s in startups:
+        s.team_size = s.members.count()
+        completed = s.milestones.filter(status='completed').order_by('-milestone_progress')
+        s.latest_milestone = completed.first().title if completed.exists() else "None"
+        s.current_progress = s.progress
+        
+    icebox_logo_src = _get_img_src(request, '/static/img/logo-light-mode.png', for_pdf=for_pdf)
+    
+    html = f"""<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head><title>{cohort.name} Report</title>{REPORT_STYLE}</head>
+<body>"""
+
+    if icebox_logo_src:
+        html += f'<div style="text-align: center; margin-bottom: 20px;"><img src="{icebox_logo_src}" style="width: 200px; height: auto;" alt="Icebox Logo"/></div>'
+        
+    html += f"<h1>{cohort.name} Report</h1>"
+    html += f"<p><strong>Total Startups:</strong> {startups.count()}</p>"
+
+    for idx, s in enumerate(startups, 1):
+        team_size = s.members.count()
+        progress = s.progress
+        milestones = s.milestones.prefetch_related('deliverables__files', 'deliverables__comments__user').order_by('milestone_progress')
+        total_revisions = sum(d.files.count() for m in milestones for d in m.deliverables.all())
+        
+        startup_logo_src = _get_img_src(request, s.logo.url, for_pdf=for_pdf) if s.logo else ""
+        
+        completed_at = None
+        if progress == 100:
+            last_milestone = s.milestones.filter(status='completed').order_by('-completed_at').first()
+            if last_milestone and last_milestone.completed_at:
+                completed_at = last_milestone.completed_at.strftime('%B %d, %Y')
+        
+        html += f"""
+<hr />
+<h2>Startup {idx}: {s.name}</h2>"""
+
+        if startup_logo_src:
+            html += f'<div style="margin-bottom: 15px;"><img src="{startup_logo_src}" style="width: 120px; height: auto;" alt="{s.name} Logo"/></div>'
+
+        html += f"""
+<p><strong>Description:</strong> {s.description or 'No description provided.'}</p>
+<p><strong>Team Size:</strong> {team_size} member{'s' if team_size != 1 else ''}</p>
+<p><strong>Overall Progress:</strong> {progress}%</p>
+<p><strong>Total Revisions:</strong> {total_revisions}</p>"""
+
+        if completed_at:
+            html += f"<p><strong>Completed At:</strong> {completed_at}</p>"
+
+        html += """
+<h3>Team Members</h3>
+<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
+    <tr>
+        <th>Name</th>
+        <th>Role</th>
+        <th>Email</th>
+    </tr>"""
+        for member in s.startupmember_set.select_related('user').all():
+            name = member.user.get_full_name() or member.user.username
+            role = member.role or "Member"
+            email = member.user.email or "--"
+            html += f"""
+    <tr>
+        <td>{name}</td>
+        <td>{role}</td>
+        <td>{email}</td>
+    </tr>"""
+        
+        html += """</table>
+<h3>Milestones</h3>
+<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+    <tr>
+        <th>Milestone</th>
+        <th>Deliverable</th>
+        <th>Status</th>
+        <th>Due Date</th>
+        <th>Uploaded At</th>
+        <th>Revisions</th>
+        <th>Admin Notes</th>
+    </tr>"""
+        for m in milestones:
+            for d in m.deliverables.all():
+                due = d.due_date.strftime('%Y-%m-%d') if d.due_date else '--'
+                uploaded = d.uploaded_at.strftime('%Y-%m-%d') if d.uploaded_at else '--'
+                revs = len(d.files.all())
+                admin_notes = [c.content for c in d.comments.all() if c.user.role in ['admin', 'super_admin']]
+                notes_str = "<br/>".join(admin_notes) if admin_notes else "--"
+                
+                html += f"""
+    <tr>
+        <td>{m.title}</td>
+        <td>{d.name}</td>
+        <td>{d.get_status_display()}</td>
+        <td>{due}</td>
+        <td>{uploaded}</td>
+        <td>{revs}</td>
+        <td>{notes_str}</td>
+    </tr>"""
+        html += """</table>"""
+        
+    html += """</body></html>"""
+    
+    response = HttpResponse(html, content_type='application/msword')
+    response['Content-Disposition'] = f'attachment; filename="cohort_{cohort.id}_report.doc"'
+    return response
+
+@login_required
+def startup_report_docx(request, for_pdf=False):
+    if request.user.role not in ['admin', 'super_admin']:
+        return HttpResponse("Unauthorized", status=403)
+    startup_id = request.GET.get('startup_id')
+    if not startup_id:
+        return HttpResponse("No startup specified", status=400)
+    startup = get_object_or_404(Startup, id=startup_id)
+    
+    team_size = startup.members.count()
+    cohort_name = startup.cohort.name if startup.cohort else 'Unassigned'
+    progress = startup.progress
+    
+    milestones = startup.milestones.prefetch_related('deliverables__files', 'deliverables__comments__user').order_by('milestone_progress')
+    total_revisions = sum(d.files.count() for m in milestones for d in m.deliverables.all())
+    
+    icebox_logo_src = _get_img_src(request, '/static/img/logo-light-mode.png', for_pdf=for_pdf)
+    startup_logo_src = _get_img_src(request, startup.logo.url, for_pdf=for_pdf) if startup.logo else ""
+    
+    completed_at = None
+    if progress == 100:
+        last_milestone = startup.milestones.filter(status='completed').order_by('-completed_at').first()
+        if last_milestone and last_milestone.completed_at:
+            completed_at = last_milestone.completed_at.strftime('%B %d, %Y')
+            
+    html = f"""<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head><title>Startup Report: {startup.name}</title>{REPORT_STYLE}</head>
+<body>"""
+
+    if icebox_logo_src:
+        html += f'<div style="text-align: center; margin-bottom: 20px;"><img src="{icebox_logo_src}" style="width: 200px; height: auto;" alt="Icebox Logo"/></div>'
+        
+    html += f"<h1>Startup Report: {startup.name}</h1>"
+    
+    if startup_logo_src:
+        html += f'<div style="margin-bottom: 15px;"><img src="{startup_logo_src}" style="width: 120px; height: auto;" alt="{startup.name} Logo"/></div>'
+        
+    html += f"""
+<p><strong>Description:</strong> {startup.description or 'No description provided.'}</p>
+<p><strong>Cohort:</strong> {cohort_name}</p>
+<p><strong>Team Size:</strong> {team_size} member{'s' if team_size != 1 else ''}</p>
+<p><strong>Overall Progress:</strong> {progress}%</p>
+<p><strong>Total Revisions:</strong> {total_revisions}</p>
+"""
+    if completed_at:
+        html += f"<p><strong>Completed At:</strong> {completed_at}</p>"
+
+    html += """
+<h2>Team Members</h2>
+<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
+    <tr>
+        <th>Name</th>
+        <th>Role</th>
+        <th>Email</th>
+    </tr>"""
+    for member in startup.startupmember_set.select_related('user').all():
+        name = member.user.get_full_name() or member.user.username
+        role = member.role or "Member"
+        email = member.user.email or "--"
+        html += f"""
+    <tr>
+        <td>{name}</td>
+        <td>{role}</td>
+        <td>{email}</td>
+    </tr>"""
+    html += """</table>"""
+    html += """
+<h2>Milestones</h2>
+<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+    <tr>
+        <th>Milestone</th>
+        <th>Deliverable</th>
+        <th>Status</th>
+        <th>Due Date</th>
+        <th>Uploaded At</th>
+        <th>Revisions</th>
+        <th>Admin Notes</th>
+    </tr>"""
+    
+    for m in milestones:
+        for d in m.deliverables.all():
+            due = d.due_date.strftime('%Y-%m-%d') if d.due_date else '--'
+            uploaded = d.uploaded_at.strftime('%Y-%m-%d') if d.uploaded_at else '--'
+            revs = len(d.files.all())
+            admin_notes = [c.content for c in d.comments.all() if c.user.role in ['admin', 'super_admin']]
+            notes_str = "<br/>".join(admin_notes) if admin_notes else "--"
+            
+            html += f"""
+    <tr>
+        <td>{m.title}</td>
+        <td>{d.name}</td>
+        <td>{d.get_status_display()}</td>
+        <td>{due}</td>
+        <td>{uploaded}</td>
+        <td>{revs}</td>
+        <td>{notes_str}</td>
+    </tr>"""
+    html += """</table></body></html>"""
+    
+    response = HttpResponse(html, content_type='application/msword')
+    response['Content-Disposition'] = f'attachment; filename="startup_{startup.id}_report.doc"'
+    return response
+
+@login_required
+def startup_report_pdf(request):
+    try:
+        from xhtml2pdf import pisa
+        from io import BytesIO
+    except ImportError:
+        return HttpResponse("Please install xhtml2pdf (pip install xhtml2pdf) to use this feature.", status=501)
+        
+    docx_response = startup_report_docx(request, for_pdf=True)
+    if docx_response.status_code != 200:
+        return docx_response
+        
+    html_content = docx_response.content.decode('utf-8')
+    result = BytesIO()
+    pdf = pisa.pisaDocument(BytesIO(html_content.encode("UTF-8")), result)
+    if not pdf.err:
+        response = HttpResponse(result.getvalue(), content_type='application/pdf')
+        startup_id = request.GET.get('startup_id')
+        response['Content-Disposition'] = f'attachment; filename="startup_{startup_id}_report.pdf"'
+        return response
+    return HttpResponse("Error generating PDF", status=500)
+
+@login_required
+def cohort_report_pdf(request):
+    try:
+        from xhtml2pdf import pisa
+        from io import BytesIO
+    except ImportError:
+        return HttpResponse("Please install xhtml2pdf (pip install xhtml2pdf) to use this feature.", status=501)
+        
+    docx_response = cohort_report_docx(request, for_pdf=True)
+    if docx_response.status_code != 200:
+        return docx_response
+        
+    html_content = docx_response.content.decode('utf-8')
+    result = BytesIO()
+    pdf = pisa.pisaDocument(BytesIO(html_content.encode("UTF-8")), result)
+    if not pdf.err:
+        response = HttpResponse(result.getvalue(), content_type='application/pdf')
+        cohort_id = request.GET.get('cohort_id')
+        response['Content-Disposition'] = f'attachment; filename="cohort_{cohort_id}_report.pdf"'
+        return response
+    return HttpResponse("Error generating PDF", status=500)

@@ -437,7 +437,7 @@
                                     {% for i in "123456789"|make_list %}<option value="Level {{ i }}">Level {{ i }}</option>{% endfor %}
                                 </select>
                                 <div class="rl-custom-dropdown" id="{{ tl }}Dropdown" data-rl-type="{{ rl_type }}" data-target="{{ tl }}Select" data-placeholder="Incubatee Level" style="display: none;">
-                                    <div class="rl-dd-trigger" onclick="toggleRLDropdown(this)"><span class="rl-dd-label">Incubatee Level</span><span class="rl-dd-arrow">▾</span></div>
+                                    <div class="rl-dd-trigger" onclick="toggleRLDropdown(this)" style="min-width: 130px;"><span class="rl-dd-label" style="text-overflow: clip; overflow: visible; white-space: nowrap;">Incubatee Level</span><span class="rl-dd-arrow">▾</span></div>
                                     <div class="rl-dd-menu"></div>
                                 </div>
                                 <select id="{{ tl }}AdminSelect" name="{{ tl }}_admin_level" class="form-control rl-select" data-rl-type="{{ rl_type }}" style="display: none !important;" {% if user.role == 'incubatee' %}disabled{% endif %}>
@@ -445,7 +445,7 @@
                                     {% for i in "123456789"|make_list %}<option value="Level {{ i }}">Level {{ i }}</option>{% endfor %}
                                 </select>
                                 <div class="rl-custom-dropdown" id="{{ tl }}AdminDropdown" data-rl-type="{{ rl_type }}" data-target="{{ tl }}AdminSelect" data-placeholder="Admin Verdict" style="display: none;">
-                                    <div class="rl-dd-trigger" onclick="toggleRLDropdown(this)"><span class="rl-dd-label">Admin Verdict</span><span class="rl-dd-arrow">▾</span></div>
+                                    <div class="rl-dd-trigger" onclick="toggleRLDropdown(this)" style="min-width: 130px;"><span class="rl-dd-label" style="text-overflow: clip; overflow: visible; white-space: nowrap;">Admin Verdict</span><span class="rl-dd-arrow">▾</span></div>
                                     <div class="rl-dd-menu"></div>
                                 </div>
                             </div>
@@ -472,11 +472,6 @@
                         {% else %}
                             <div style="display: flex; flex-direction: column; gap: 10px;">
                                 <button type="submit" class="btn btn-primary" style="width: 100%; font-weight: 600; padding: 12px; font-size: 1rem; border-radius: 8px; background: var(--glass-bg); border: 1px solid var(--border-color); color: var(--text-primary);" onclick="document.getElementById('modalActionInput').value='save';">Save Changes</button>
-                                {% if incubatee_files %}
-                                    <button type="submit" class="btn btn-primary" style="width: 100%; font-weight: 600; padding: 12px; font-size: 1rem; border-radius: 8px;" onclick="document.getElementById('modalActionInput').value='save';">Turn in</button>
-                                {% else %}
-                                    <button type="submit" class="btn btn-primary" style="width: 100%; font-weight: 600; padding: 12px; font-size: 1rem; border-radius: 8px;" onclick="document.getElementById('modalActionInput').value='save';">Mark as done</button>
-                                {% endif %}
                                 <a href="{% url 'view_milestone' startup.id milestone.id %}" class="btn btn-ghost" style="width: 100%; text-align: center; padding: 12px; font-size: 1rem;">Cancel</a>
                             </div>
                         {% endif %}
@@ -496,7 +491,7 @@
                 
                 <div style="margin-bottom: 15px;">
                     <label style="display: block; font-weight: 600; margin-bottom: 5px; color: var(--text-primary); font-size: 0.9rem;">Feedback / Requirements *</label>
-                    <textarea name="comment" id="revisionCommentInput" class="form-control" rows="4" style="width: 100%;"></textarea>
+                    <textarea name="revision_comment" id="revisionCommentInput" class="form-control" rows="4" style="width: 100%;"></textarea>
                 </div>
 
                 <div style="margin-bottom: 15px;">
@@ -528,9 +523,10 @@
     </form>
 </div>
 
-<!-- Scripts -->
-<script src="{% static 'js/rl_dropdown.js' %}"></script>
 <script>
+    window.DYNAMIC_RL_DATA = {{ rl_data_json|safe }};
+</script>
+<script src="{% static 'js/rl_dropdown.js' %}"></script><script>
     // Comment Styling
     document.addEventListener("DOMContentLoaded", function() {
         document.querySelectorAll('.fb-comment-text').forEach(el => {
@@ -747,7 +743,6 @@
                         if (adminCustomDD) showRLDropdown(adminCustomDD, false);
                     }
                 }
-
                 // Auto-show the info card for the currently set level
                 showRLInfo(select);
             } else {

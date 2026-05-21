@@ -71,9 +71,7 @@
                     </span>
                     {% endif %}
                     
-                    {% if startup.industry and startup.industry != "None" %}
-                    <span class="text-sm text-muted">{{ startup.industry }}</span>
-                    {% endif %}
+
                 </div>
                 <p class="text-secondary max-w-2xl mb-md">{{ startup.description }}</p>
 
@@ -171,33 +169,6 @@
                 {% for milestone in milestones %}
                 <div class="flex flex-col items-center relative z-10 w-[240px] flex-shrink-0">
                     <!-- Card -->
-                    {% if milestone.is_locked and user.role != 'admin' and user.role != 'super_admin' %}
-                    <div class="glass-card p-md w-full text-center opacity-50 cursor-not-allowed relative" style="transition: all 0.3s ease;">
-                        <div class="mb-xs flex items-center justify-center">
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center border-4 shadow-lg bg-secondary text-white">
-                                🔒
-                            </div>
-                        </div>
-                        <div class="font-bold text-primary mb-xs">
-                            {{ milestone.title }}
-                        </div>
-                        <ul class="text-sm text-muted text-left list-disc list-inside space-y-1">
-                            {% if milestone.deliverables.first %}
-                            <li>{{ milestone.deliverables.first.name }}</li>
-                            {% endif %}
-                        </ul>
-                        <div class="mt-xs text-left" style="width: 100%;">
-                            <div class="flex justify-between text-xs mb-1">
-                                <span class="text-muted">Progress</span>
-                                <span class="font-bold text-accent">{{ milestone.progress_percentage }}%</span>
-                            </div>
-                            <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
-                                <div style="height: 100%; width: {{ milestone.progress_percentage }}%; background: var(--accent-color); border-radius: 3px; transition: width 0.5s ease;"></div>
-                            </div>
-                        </div>
-                        <div class="text-xs text-accent font-semibold mt-md">Complete previous milestone to unlock</div>
-                    </div>
-                    {% else %}
                     <a href="{% url 'view_milestone' startup.id milestone.id %}" class="glass-card p-md w-full text-center hover:border-accent transition-colors cursor-pointer" style="transition: all 0.3s ease; {% if milestone.status == 'completed' %}border: 1px solid var(--success-color); box-shadow: 0 0 15px rgba(34,197,94,0.3);{% endif %}">
                         <div class="mb-xs flex items-center justify-center">
                             <div class="w-10 h-10 rounded-full flex items-center justify-center border-4 shadow-lg {% if milestone.status == 'completed' %}bg-success text-white{% elif milestone.id == current_milestone_id %}bg-warning text-black{% else %}bg-secondary text-white{% endif %}">
@@ -228,7 +199,6 @@
                             </div>
                         </div>
                     </a>
-                    {% endif %}
                 </div>
 
                 {% if not forloop.last %}
