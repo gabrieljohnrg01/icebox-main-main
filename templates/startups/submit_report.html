@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Submit Report{% endblock %}
+
+{% block content %}
+<div class="flex justify-center">
+    <div class="w-full max-w-2xl">
+        <h1 class="heading-lg mb-xs">Submit Progress Report</h1>
+        <h3 class="text-muted font-normal mb-lg">{{ startup.name }}</h3>
+
+        <div class="glass-card">
+            <form method="post">
+                {% csrf_token %}
+
+                {% if current_milestone %}
+                <div class="mb-lg p-md rounded-md bg-surface-secondary">
+                    <div class="text-muted mb-xs">Current milestone</div>
+                    <div class="font-semibold">
+                        {% if current_milestone.title %}
+                            {{ current_milestone.title }}
+                        {% else %}
+                            Milestone {{ current_milestone.milestone_progress }}
+                        {% endif %}
+                    </div>
+
+                    {% if current_deliverable %}
+                    <div class="text-muted mt-sm">Current deliverable</div>
+                    <div class="font-semibold">{{ current_deliverable.name }}</div>
+                    {% else %}
+                    <div class="text-sm text-muted mt-sm">No active deliverable found for the current milestone.</div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="mb-lg p-md rounded-md bg-surface-secondary text-sm text-muted">
+                    No active milestone is available for this startup right now.
+                </div>
+                {% endif %}
+
+                <div class="grid gap-md">
+                    {% for field in form %}
+                    <div class="form-group">
+                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                        <div class="text-danger text-sm mt-xs">{{ field.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="flex items-center gap-md mt-lg">
+                    <button type="submit" class="btn btn-primary">Submit Report</button>
+                    <a href="{% url 'view_startup' startup.id %}" class="btn btn-ghost">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

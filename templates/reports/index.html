@@ -1,0 +1,622 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<style>
+    .reports-heading {
+        color: var(--text-primary) !important;
+    }
+    
+    .report-card {
+        background: var(--glass-bg);
+        border: var(--glass-border);
+        box-shadow: var(--glass-shadow);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+    }
+
+    body.light-mode .report-card {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    .report-select {
+        width: 100%;
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0.65rem 0.85rem;
+        font-size: 0.95rem;
+        transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+    }
+
+    .report-select:focus {
+        border-color: var(--brand-blue);
+        box-shadow: 0 0 0 3px rgba(41, 145, 239, 0.2);
+        outline: none;
+    }
+
+    .report-select option {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+
+    body.light-mode .report-select {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    body.light-mode .report-select option {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+    }
+
+    .startup-item.glass-card {
+        transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+        display: flex;
+    }
+
+    .startup-item.glass-card:hover {
+        transform: translateY(-2px);
+    }
+
+    body.light-mode .startup-item.glass-card {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+    }
+
+    body.light-mode .startup-item.glass-card:hover {
+        border-color: #cbd5e1 !important;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    body.light-mode .startup-avatar-placeholder {
+        background: #f1f5f9 !important;
+        border-color: #cbd5e1 !important;
+        color: #0f172a !important;
+    }
+
+    /* Filter Pills */
+    .filter-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .filter-pill {
+        padding: 0.35rem 0.85rem;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary);
+        transition: all 0.15s ease;
+    }
+
+    .filter-pill:hover {
+        color: var(--text-primary);
+        border-color: var(--accent-color);
+    }
+
+    .filter-pill.active {
+        background: var(--accent-color);
+        border-color: var(--accent-color);
+        color: #ffffff !important;
+    }
+
+    body.light-mode .filter-pill {
+        background: #f1f5f9;
+        border-color: #e2e8f0;
+        color: #475569;
+    }
+
+    body.light-mode .filter-pill:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
+
+    body.light-mode .filter-pill.active {
+        background: var(--accent-color) !important;
+        border-color: var(--accent-color) !important;
+        color: #ffffff !important;
+    }
+
+    /* Progress Reports Table */
+    .reports-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+    .reports-table th {
+        padding: 0.75rem 1rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        border-bottom: 2px solid var(--border-color);
+        text-align: left;
+    }
+
+    .reports-table td {
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+    }
+
+    body.light-mode .reports-table th {
+        color: #475569;
+        border-bottom-color: #e2e8f0;
+    }
+
+    body.light-mode .reports-table td {
+        border-bottom-color: #f1f5f9;
+    }
+
+    /* Modal styling */
+    .report-modal-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        backdrop-filter: blur(4px);
+    }
+
+    .report-modal-backdrop.show {
+        display: flex;
+    }
+
+    .report-modal-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        width: 100%;
+        max-width: 680px;
+        max-height: 85vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        padding: 1.75rem;
+    }
+
+    body.light-mode .report-modal-card {
+        background: #ffffff !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
+    }
+</style>
+
+<div style="display: flex; flex-direction: column; gap: 2.5rem; max-width: 1250px; margin: 0 auto;">
+    
+    <!-- Top Two-Column Grid: Left (Generators) & Right (Startups Browser) -->
+    <div style="display: grid; grid-template-columns: minmax(320px, 1fr) 2fr; gap: 3rem; align-items: start;">
+        
+        <!-- Left Column: Report Generators -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div>
+                <h1 class="heading-lg reports-heading" id="reports-header" style="margin-bottom: 0.5rem;">Reports Center</h1>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                    Generate progress, milestones, and readiness reports per cohort, incubator-wide, or for an individual startup.
+                </p>
+            </div>
+            
+            <!-- Card 1: By Cohort / Incubator-Wide -->
+            <div class="report-card">
+                <h2 class="reports-heading" style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>👥</span> Cohort / Incubator Report
+                </h2>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+                    Generate an aggregated report for all startups within a specific cohort or across the entire incubator.
+                </p>
+                
+                <form action="{% url 'cohort_report' %}" method="get" class="flex flex-col gap-sm">
+                    <div>
+                        <label for="cohort-select" style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem;">Select Cohort or Group</label>
+                        <select name="cohort_id" id="cohort-select" class="report-select" required>
+                            <option value="" disabled selected>-- Select a Cohort or Group --</option>
+                            <option value="all">🌟 All Cohorts & Startups (Incubator-wide)</option>
+                            {% for cohort in cohorts %}
+                            <option value="{{ cohort.id }}">{{ cohort.name }}</option>
+                            {% endfor %}
+                            <option value="unassigned">Unassigned Startups</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="btn-generate-cohort-report" style="margin-top: 0.5rem; justify-content: center; width: 100%; padding: 0.65rem; font-weight: 600;">
+                        📄 Generate Cohort Report
+                    </button>
+                </form>
+            </div>
+
+            <!-- Card 2: By Startup Directly -->
+            <div class="report-card">
+                <h2 class="reports-heading" style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>🚀</span> Individual Startup Report
+                </h2>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+                    Jump directly to any enrolled startup to generate its detailed report with readiness levels and deliverables.
+                </p>
+                
+                <form action="{% url 'startup_report' %}" method="get" class="flex flex-col gap-sm">
+                    <div>
+                        <label for="startup-select" style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem;">Select Startup</label>
+                        <select name="startup_id" id="startup-select" class="report-select" required>
+                            <option value="" disabled selected>-- Select a Startup --</option>
+                            {% for startup in startups %}
+                            <option value="{{ startup.id }}">{{ startup.name }} ({{ startup.cohort.name|default:"Unassigned" }})</option>
+                            {% empty %}
+                            <option value="" disabled>No startups enrolled</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="btn-generate-startup-report" style="margin-top: 0.5rem; justify-content: center; width: 100%; padding: 0.65rem; font-weight: 600;">
+                        📊 Generate Startup Report
+                    </button>
+                </form>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Startups Browser & Quick Access -->
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+                <h2 id="right-col-title" class="reports-heading" style="font-size: 1.1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin: 0;">
+                    All Startups ({{ startups|length }})
+                </h2>
+                <!-- Search Input -->
+                <div style="position: relative; min-width: 220px;">
+                    <input type="text" id="startup-search-input" placeholder="🔍 Search startups..." class="report-select" style="padding: 0.45rem 0.75rem; font-size: 0.85rem; border-radius: 6px;">
+                </div>
+            </div>
+
+            <!-- Cohort Filter Pills -->
+            <div class="filter-pills" id="cohort-filter-pills">
+                <button type="button" class="filter-pill active" data-filter="all">All Startups ({{ startups|length }})</button>
+                {% for cohort in cohorts %}
+                <button type="button" class="filter-pill" data-filter="{{ cohort.id }}">{{ cohort.name }}</button>
+                {% endfor %}
+                <button type="button" class="filter-pill" data-filter="unassigned">Unassigned</button>
+            </div>
+            
+            <div id="startups-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                {% for startup in startups %}
+                <div class="startup-item glass-card" data-cohort="{{ startup.cohort.id|default:'unassigned' }}" data-name="{{ startup.name|lower }}" style="padding: 1rem 1.25rem; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                    
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <!-- Dynamic Logo / Avatar -->
+                        {% if startup.logo %}
+                            <img src="{{ startup.logo.url }}" alt="{{ startup.name }} Logo" style="width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--border-color); object-fit: cover; background: var(--bg-secondary);">
+                        {% else %}
+                            <div class="startup-avatar-placeholder" style="width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; text-align: center; color: var(--text-primary); font-weight: 700; background: var(--bg-secondary);">
+                                {{ startup.name|slice:":1"|upper }}
+                            </div>
+                        {% endif %}
+                        
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                <span style="font-weight: 700; font-size: 1.15rem; color: var(--text-primary);">{{ startup.name }}</span>
+                                <span style="font-size: 0.75rem; font-weight: 600; padding: 0.15rem 0.55rem; border-radius: 9999px; background: {% if startup.cohort %}rgba(41, 145, 239, 0.15); color: var(--accent-color);{% else %}rgba(100, 116, 139, 0.15); color: var(--text-tertiary);{% endif %}; border: 1px solid var(--border-color);">
+                                    {{ startup.cohort.name|default:"Unassigned" }}
+                                </span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.8rem; color: var(--text-secondary);">
+                                <span>👥 {{ startup.team_size }} member{{ startup.team_size|pluralize }}</span>
+                                <span>•</span>
+                                <span>Progress: <strong style="color: var(--accent-color);">{{ startup.progress }}%</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <a href="{% url 'startup_report' %}?startup_id={{ startup.id }}" class="btn btn-primary" style="padding: 0.55rem 1.1rem; font-weight: 600; border-radius: 6px; font-size: 0.85rem;">
+                            📊 View Report
+                        </a>
+                        <a href="{% url 'view_startup' startup.id %}" class="btn btn-ghost" style="padding: 0.55rem 0.85rem; font-size: 0.85rem; border-radius: 6px;">
+                            Profile ↗
+                        </a>
+                    </div>
+                    
+                </div>
+                {% empty %}
+                <div style="color: var(--text-tertiary); font-style: italic; padding: 1.5rem; text-align: center;">
+                    No startups registered in the system yet.
+                </div>
+                {% endfor %}
+                
+                <div id="no-startups-message" style="display: none; color: var(--text-tertiary); font-style: italic; font-size: 0.95rem; padding: 2rem; text-align: center;">
+                    No startups match the selected cohort or search filter.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Section: Submitted Founder Progress Reports -->
+    <div class="report-card" style="margin-top: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+                <h2 class="reports-heading" style="font-size: 1.25rem; font-weight: 700; margin: 0 0 0.25rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>📑</span> Submitted Founder Progress Reports
+                    <span style="font-size: 0.8rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 9999px; background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--accent-color);">
+                        {{ progress_reports|length }}
+                    </span>
+                </h2>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">
+                    Live reports submitted by founders directly from the incubatee portal.
+                </p>
+            </div>
+        </div>
+
+        {% if progress_reports %}
+        <div style="overflow-x: auto;">
+            <table class="reports-table">
+                <thead>
+                    <tr>
+                        <th>Date Submitted</th>
+                        <th>Startup</th>
+                        <th>Report Title</th>
+                        <th>Submitted By</th>
+                        <th>Achievements / Excerpt</th>
+                        <th style="text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pr in progress_reports %}
+                    <tr>
+                        <td style="white-space: nowrap; color: var(--text-secondary); font-size: 0.85rem;">
+                            {{ pr.submitted_at|date:"M d, Y" }}<br>
+                            <span style="font-size: 0.75rem; color: var(--text-tertiary);">{{ pr.submitted_at|date:"h:i A" }}</span>
+                        </td>
+                        <td style="font-weight: 700; color: var(--text-primary);">
+                            <a href="{% url 'startup_report' %}?startup_id={{ pr.startup.id }}" style="color: var(--text-primary); text-decoration: none;">
+                                {{ pr.startup.name }} ↗
+                            </a>
+                        </td>
+                        <td style="font-weight: 600; color: var(--text-primary); max-width: 200px;">
+                            {{ pr.title }}
+                        </td>
+                        <td style="color: var(--text-secondary); font-size: 0.85rem;">
+                            {{ pr.submitted_by.get_full_name|default:pr.submitted_by.username }}
+                        </td>
+                        <td style="max-width: 280px; font-size: 0.85rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            {{ pr.achievements|default:pr.description|truncatechars:70 }}
+                        </td>
+                        <td style="text-align: right; white-space: nowrap;">
+                            <button type="button" class="btn btn-secondary btn-view-progress-modal" 
+                                style="padding: 0.35rem 0.75rem; font-size: 0.8rem;"
+                                data-title="{{ pr.title|escape }}"
+                                data-startup="{{ pr.startup.name|escape }}"
+                                data-submitter="{{ pr.submitted_by.get_full_name|default:pr.submitted_by.username|escape }}"
+                                data-date="{{ pr.submitted_at|date:'F j, Y, h:i A' }}"
+                                data-desc="{{ pr.description|escape }}"
+                                data-achieve="{{ pr.achievements|default:''|escape }}"
+                                data-challenges="{{ pr.challenges|default:''|escape }}"
+                                data-next="{{ pr.next_steps|default:''|escape }}">
+                                View Details
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="padding: 2rem; text-align: center; color: var(--text-tertiary); font-style: italic;">
+            No founder progress reports submitted yet. When startups submit progress reports via the portal, they will appear here in real-time.
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Modal for Viewing Progress Report Details -->
+<div id="progress-report-modal" class="report-modal-backdrop">
+    <div class="report-modal-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+            <div>
+                <h3 id="modal-report-title" style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.25rem 0;"></h3>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                    Startup: <strong id="modal-report-startup" style="color: var(--accent-color);"></strong> • 
+                    By: <span id="modal-report-submitter"></span> • 
+                    <span id="modal-report-date"></span>
+                </div>
+            </div>
+            <button type="button" id="modal-close-btn" class="btn btn-ghost" style="font-size: 1.2rem; padding: 0.2rem 0.6rem; line-height: 1;">✕</button>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div>
+                <h4 style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); margin: 0 0 0.35rem 0;">Description</h4>
+                <p id="modal-report-desc" style="font-size: 0.9rem; line-height: 1.5; color: var(--text-primary); margin: 0; white-space: pre-wrap; background: var(--bg-primary); padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-color);"></p>
+            </div>
+            
+            <div id="modal-achieve-box" style="display: none;">
+                <h4 style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--success-color); margin: 0 0 0.35rem 0;">Key Achievements</h4>
+                <p id="modal-report-achieve" style="font-size: 0.9rem; line-height: 1.5; color: var(--text-primary); margin: 0; white-space: pre-wrap; background: rgba(40, 167, 69, 0.08); padding: 0.75rem; border-radius: 6px; border: 1px solid rgba(40, 167, 69, 0.25);"></p>
+            </div>
+            
+            <div id="modal-challenges-box" style="display: none;">
+                <h4 style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--danger-color); margin: 0 0 0.35rem 0;">Challenges & Blockers</h4>
+                <p id="modal-report-challenges" style="font-size: 0.9rem; line-height: 1.5; color: var(--text-primary); margin: 0; white-space: pre-wrap; background: rgba(220, 53, 69, 0.08); padding: 0.75rem; border-radius: 6px; border: 1px solid rgba(220, 53, 69, 0.25);"></p>
+            </div>
+            
+            <div id="modal-next-box" style="display: none;">
+                <h4 style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--accent-color); margin: 0 0 0.35rem 0;">Next Steps</h4>
+                <p id="modal-report-next" style="font-size: 0.9rem; line-height: 1.5; color: var(--text-primary); margin: 0; white-space: pre-wrap; background: rgba(41, 145, 239, 0.08); padding: 0.75rem; border-radius: 6px; border: 1px solid rgba(41, 145, 239, 0.25);"></p>
+            </div>
+        </div>
+        
+        <div style="margin-top: 1.5rem; text-align: right; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+            <button type="button" id="modal-dismiss-btn" class="btn btn-secondary">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const cohortSelect = document.getElementById('cohort-select');
+        const rightColTitle = document.getElementById('right-col-title');
+        const startupItems = document.querySelectorAll('.startup-item');
+        const noStartupsMsg = document.getElementById('no-startups-message');
+        const searchInput = document.getElementById('startup-search-input');
+        const filterPills = document.querySelectorAll('.filter-pill');
+
+        let currentCohortFilter = 'all';
+        let currentSearchQuery = '';
+
+        function filterStartups() {
+            let visibleCount = 0;
+            
+            startupItems.forEach(item => {
+                const itemCohort = item.dataset.cohort || 'unassigned';
+                const itemName = item.dataset.name || '';
+                
+                const matchesCohort = (currentCohortFilter === 'all') || (itemCohort === currentCohortFilter);
+                const matchesSearch = !currentSearchQuery || itemName.includes(currentSearchQuery);
+                
+                if (matchesCohort && matchesSearch) {
+                    item.style.display = 'flex';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            if (visibleCount === 0) {
+                noStartupsMsg.style.display = 'block';
+            } else {
+                noStartupsMsg.style.display = 'none';
+            }
+
+            // Update title
+            if (currentCohortFilter === 'all') {
+                rightColTitle.textContent = `All Startups (${visibleCount})`;
+            } else if (currentCohortFilter === 'unassigned') {
+                rightColTitle.textContent = `Unassigned Startups (${visibleCount})`;
+            } else {
+                const activePill = document.querySelector(`.filter-pill[data-filter="${currentCohortFilter}"]`);
+                const cohortName = activePill ? activePill.textContent.trim() : 'Filtered Startups';
+                rightColTitle.textContent = `${cohortName} (${visibleCount})`;
+            }
+        }
+
+        // Pill clicks
+        filterPills.forEach(pill => {
+            pill.addEventListener('click', function() {
+                filterPills.forEach(p => p.classList.remove('active'));
+                this.classList.add('active');
+                currentCohortFilter = this.dataset.filter;
+                
+                // Keep cohort select in sync if it has matching value
+                if (cohortSelect) {
+                    if (currentCohortFilter === 'all' || currentCohortFilter === 'unassigned') {
+                        cohortSelect.value = currentCohortFilter;
+                    } else {
+                        cohortSelect.value = currentCohortFilter;
+                    }
+                }
+                
+                filterStartups();
+            });
+        });
+
+        // Cohort select change syncs with filter
+        if (cohortSelect) {
+            cohortSelect.addEventListener('change', function() {
+                const selectedVal = this.value;
+                if (selectedVal) {
+                    currentCohortFilter = selectedVal;
+                    filterPills.forEach(p => {
+                        if (p.dataset.filter === selectedVal) {
+                            p.classList.add('active');
+                        } else {
+                            p.classList.remove('active');
+                        }
+                    });
+                    filterStartups();
+                }
+            });
+        }
+
+        // Live search filter
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                currentSearchQuery = this.value.trim().toLowerCase();
+                filterStartups();
+            });
+        }
+
+        // Modal interactions
+        const modal = document.getElementById('progress-report-modal');
+        const modalTitle = document.getElementById('modal-report-title');
+        const modalStartup = document.getElementById('modal-report-startup');
+        const modalSubmitter = document.getElementById('modal-report-submitter');
+        const modalDate = document.getElementById('modal-report-date');
+        const modalDesc = document.getElementById('modal-report-desc');
+        const modalAchieve = document.getElementById('modal-report-achieve');
+        const modalAchieveBox = document.getElementById('modal-achieve-box');
+        const modalChallenges = document.getElementById('modal-report-challenges');
+        const modalChallengesBox = document.getElementById('modal-challenges-box');
+        const modalNext = document.getElementById('modal-report-next');
+        const modalNextBox = document.getElementById('modal-next-box');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        const modalDismissBtn = document.getElementById('modal-dismiss-btn');
+
+        function closeModal() {
+            modal.classList.remove('show');
+        }
+
+        if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
+        if (modalDismissBtn) modalDismissBtn.addEventListener('click', closeModal);
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) closeModal();
+            });
+        }
+
+        document.querySelectorAll('.btn-view-progress-modal').forEach(btn => {
+            btn.addEventListener('click', function() {
+                modalTitle.textContent = this.dataset.title || 'Progress Report';
+                modalStartup.textContent = this.dataset.startup || '';
+                modalSubmitter.textContent = this.dataset.submitter || '';
+                modalDate.textContent = this.dataset.date || '';
+                modalDesc.textContent = this.dataset.desc || 'No description provided.';
+
+                if (this.dataset.achieve) {
+                    modalAchieve.textContent = this.dataset.achieve;
+                    modalAchieveBox.style.display = 'block';
+                } else {
+                    modalAchieveBox.style.display = 'none';
+                }
+
+                if (this.dataset.challenges) {
+                    modalChallenges.textContent = this.dataset.challenges;
+                    modalChallengesBox.style.display = 'block';
+                } else {
+                    modalChallengesBox.style.display = 'none';
+                }
+
+                if (this.dataset.next) {
+                    modalNext.textContent = this.dataset.next;
+                    modalNextBox.style.display = 'block';
+                } else {
+                    modalNextBox.style.display = 'none';
+                }
+
+                modal.classList.add('show');
+            });
+        });
+
+        // Initialize view showing all startups
+        filterStartups();
+    });
+</script>
+{% endblock %}

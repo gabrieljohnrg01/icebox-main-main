@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Member{% endblock %}
+
+{% block content %}
+<div class="flex justify-center">
+    <div class="w-full max-w-3xl">
+        <div class="mb-lg">
+            <h1 class="heading-lg">Add Members to <span class="text-accent">{{ startup.name }}</span></h1>
+            <p class="text-muted text-sm mt-xs">
+                Enter member details below to create a new user.<br>
+                <strong>Pro Tip:</strong> If the member already exists in the system, simply entering their exact Email Address will automatically link them to this startup!
+            </p>
+        </div>
+
+        <div class="glass-card mb-lg">
+            <form method="post" class="startup-form">
+                {% csrf_token %}
+                <div class="startup-form-grid">
+                    {% for field in form %}
+                        {% if field.name != 'other_position' %}
+                            <div class="form-group">
+                                <div class="startup-form-field-heading">
+                                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                                    {% if field.field.required %}
+                                    <span class="required-indicator">Required</span>
+                                    {% else %}
+                                    <span class="optional-indicator">Optional</span>
+                                    {% endif %}
+                                </div>
+                                {{ field }}
+                                {% if field.name == 'position' %}
+                                <div id="other-position-container" style="display:none; margin-top: 14px;">
+                                    <div class="startup-form-field-heading">
+                                        <label for="other-position" class="form-label">Other position</label>
+                                        <span class="required-indicator">Required</span>
+                                    </div>
+                                    {{ form.other_position }}
+                                </div>
+                                {% endif %}
+                                {% if field.errors %}
+                                <div class="text-danger text-sm mt-xs">{{ field.errors.0 }}</div>
+                                {% endif %}
+                                {% if field.help_text %}
+                                <div class="text-muted text-xs mt-xs">{{ field.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="flex items-center gap-md mt-lg pt-md border-t border-glass">
+                    <button type="submit" name="action" value="save_and_add_another" class="btn btn-primary">Add Member & Add Another</button>
+                    <button type="submit" name="action" value="save_and_view" class="btn btn-secondary">Add Member & View Startup</button>
+                    <a href="{% url 'view_startup' startup.id %}" class="btn btn-ghost">Cancel</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- List of Added Members Preview -->
+        <div>
+            <h3 class="heading-md mb-md">Current Members</h3>
+            {% if startup.startupmember_set.exists %}
+            <div class="grid gap-sm">
+                {% for member in startup.startupmember_set.all %}
+                <div class="glass-card p-sm flex justify-between items-center" style="border-radius: var(--radius-md);">
+                    <div>
+                        <strong class="block text-lg" style="color: var(--text-primary);">{{ member.user.first_name }} {{ member.user.last_name }}</strong>
+                        <div class="text-sm text-muted">Username: {{ member.user.username }}{% if member.user.email %} · {{ member.user.email }}{% endif %}</div>
+                    </div>
+                    <span class="badge badge-info">{{ member.role }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted italic text-center py-md glass-card" style="border-radius: var(--radius-md);">No members added yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

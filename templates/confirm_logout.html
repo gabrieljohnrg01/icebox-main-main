@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Confirm Logout | ICEBOX{% endblock %}
+
+{% block content %}
+<div style="min-height: 70vh; display: flex; align-items: center; justify-content: center; padding: 2rem;">
+    <div style="max-width: 440px; width: 100%; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 2rem; box-shadow: var(--shadow-lg); text-align: center;">
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); color: var(--danger-color); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; font-size: 1.5rem;">
+            🚪
+        </div>
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">Confirm Logout</h2>
+        <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1.75rem;">
+            Are you sure you want to end your active session and log out of the incubator platform?
+        </p>
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary" style="flex: 1; text-align: center; text-decoration: none; padding: 0.625rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); color: var(--text-primary); display: inline-flex; align-items: center; justify-content: center;">
+                Cancel
+            </a>
+            <form method="POST" action="{% url 'logout' %}" style="flex: 1; margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger" style="width: 100%; padding: 0.625rem 1rem; border-radius: 8px; background: var(--danger-color); color: white; border: none; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+                    Log Out
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

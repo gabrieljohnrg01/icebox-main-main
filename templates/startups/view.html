@@ -1,0 +1,872 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ startup.name }}{% endblock %}
+
+{% block content %}
+<style>
+/* ==========================================================================
+   Formal Dashboard Redesign — Adaptive Dark & White Mode
+   ========================================================================== */
+:root {
+  /* Dark Mode Tokens (Default) */
+  --formal-ink: #F8FAFC;
+  --formal-paper: #0F172A;
+  --formal-card: #182235;
+  --formal-card-alt: #1E293B;
+  --formal-line: rgba(255, 255, 255, 0.12);
+  --formal-line-strong: rgba(255, 255, 255, 0.28);
+  --formal-muted: #94A3B8;
+  --formal-subline: #CBD5E1;
+  --formal-blue: #2991EF;
+  --formal-blue-hover: #1c7ed6;
+  --formal-coral: #ff694f;
+  --formal-green: #22c55e;
+  --formal-green-subtle: rgba(34, 197, 94, 0.15);
+  --formal-coral-subtle: rgba(255, 105, 79, 0.15);
+  --formal-node-bg: #131E30;
+  --formal-shadow: rgba(0, 0, 0, 0.7);
+  --formal-btn-border: rgba(255, 255, 255, 0.22);
+  --formal-progress-track: rgba(255, 255, 255, 0.12);
+  --formal-pill-bg: rgba(255, 255, 255, 0.08);
+  --formal-display: "Arial Black", "Inter", -apple-system, sans-serif;
+}
+
+body.light-mode,
+html.light-mode {
+  /* White / Light Mode Tokens */
+  --formal-ink: #171918;
+  --formal-paper: #F4F2EC;
+  --formal-card: #FFFEFA;
+  --formal-card-alt: #FFFFFF;
+  --formal-line: #D8D6CE;
+  --formal-line-strong: #171918;
+  --formal-muted: #777970;
+  --formal-subline: #454841;
+  --formal-blue: #2449e8;
+  --formal-blue-hover: #1a38bc;
+  --formal-coral: #ff694f;
+  --formal-green: #187b55;
+  --formal-green-subtle: #e6f4ee;
+  --formal-coral-subtle: #fff0eb;
+  --formal-node-bg: #F4F2EC;
+  --formal-shadow: #171918;
+  --formal-btn-border: #171918;
+  --formal-progress-track: #E1DFD7;
+  --formal-pill-bg: transparent;
+  --formal-display: "Arial Black", "Helvetica Neue", sans-serif;
+}
+
+.formal-workspace {
+  max-width: 1180px;
+  margin: 0 auto;
+  color: var(--formal-ink);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  padding-bottom: 50px;
+}
+
+/* Eyebrows */
+.formal-eyebrow {
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.7px;
+  color: var(--formal-muted);
+}
+
+/* Intro Section */
+.formal-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 28px;
+  align-items: end;
+  padding: 8px 0 32px;
+  border-bottom: 2px solid var(--formal-line-strong);
+}
+
+.formal-intro-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.formal-logo-frame {
+  width: 90px;
+  height: 90px;
+  flex-shrink: 0;
+  border: 2px solid var(--formal-line-strong);
+  background: var(--formal-card);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  box-shadow: 3px 3px 0 var(--formal-shadow);
+  border-radius: 4px;
+}
+
+.formal-logo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.formal-logo-placeholder {
+  font-family: var(--formal-display);
+  font-size: 42px;
+  font-weight: 900;
+  color: var(--formal-coral);
+}
+
+.formal-intro h1 {
+  font-family: var(--formal-display);
+  font-size: clamp(48px, 6vw, 84px);
+  line-height: .88;
+  letter-spacing: -.07em;
+  margin: 6px 0 16px;
+  font-weight: 900;
+  color: var(--formal-ink);
+}
+
+.formal-intro h1 .period {
+  color: var(--formal-coral);
+}
+
+.formal-subline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: var(--formal-subline);
+  font-size: 13px;
+}
+
+.formal-subline .contact-link {
+  color: var(--formal-subline);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.formal-subline .contact-link:hover {
+  color: var(--formal-blue);
+}
+
+.formal-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--formal-line);
+  background: var(--formal-pill-bg);
+  padding: 5px 10px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--formal-ink);
+  border-radius: 2px;
+}
+
+.formal-pill.blue {
+  background: var(--formal-blue);
+  border-color: var(--formal-blue);
+  color: #ffffff;
+}
+
+.formal-intro-actions {
+  display: grid;
+  gap: 10px;
+}
+
+/* Formal Buttons */
+.formal-btn {
+  border: 1px solid var(--formal-btn-border);
+  background: var(--formal-card);
+  color: var(--formal-ink);
+  padding: 11px 15px;
+  text-align: left;
+  font-weight: 750;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  box-sizing: border-box;
+}
+
+.formal-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 3px 3px 0 var(--formal-shadow);
+}
+
+.formal-btn.primary {
+  background: var(--formal-blue);
+  border-color: var(--formal-blue);
+  color: #ffffff;
+}
+
+.formal-btn.primary:hover {
+  background: var(--formal-blue-hover);
+}
+
+.formal-btn.danger {
+  border-color: #fca5a5;
+  color: #ef4444;
+}
+
+.formal-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.formal-btn.success {
+  border-color: #86efac;
+  color: var(--formal-green);
+}
+
+/* Overview Metrics Grid */
+.formal-overview {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 1px;
+  background: var(--formal-line);
+  border: 1px solid var(--formal-line);
+  margin: 28px 0 42px;
+  box-shadow: 2px 2px 0 var(--formal-shadow);
+}
+
+.formal-metric {
+  background: var(--formal-card);
+  padding: 20px 22px;
+  min-height: 105px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.formal-metric-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--formal-muted);
+  font-weight: 800;
+}
+
+.formal-metric-value {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: -1.8px;
+  margin-top: 6px;
+  color: var(--formal-ink);
+  line-height: 1;
+}
+
+.formal-metric-value small {
+  font-size: 12px;
+  letter-spacing: 0;
+  font-weight: 600;
+  color: var(--formal-muted);
+  margin-left: 6px;
+}
+
+/* Section Header */
+.formal-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.formal-section-head h2 {
+  font-size: 24px;
+  letter-spacing: -1px;
+  margin: 4px 0 0;
+  font-weight: 900;
+  color: var(--formal-ink);
+}
+
+.formal-section-head p {
+  color: var(--formal-muted);
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+
+.formal-section-no {
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  color: var(--formal-muted);
+  font-weight: 800;
+}
+
+/* Roadmap Section */
+.formal-roadmap-wrap {
+  width: 100%;
+}
+
+.formal-timeline-list {
+  position: relative;
+  padding: 8px 0 0 12px;
+}
+
+/* Vertical line strictly connecting milestone nodes, terminating cleanly at the last milestone */
+.formal-milestone:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: 34px;
+  bottom: 0;
+  width: 2px;
+  background: var(--formal-line);
+}
+
+.formal-milestone {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 0 0 28px;
+  align-items: start;
+}
+
+.formal-milestone:last-child {
+  padding-bottom: 0;
+}
+
+.formal-node {
+  position: relative;
+  z-index: 1;
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--formal-line-strong);
+  background: var(--formal-node-bg);
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 12px;
+  color: var(--formal-ink);
+  border-radius: 2px;
+}
+
+.formal-milestone.done .formal-node {
+  background: var(--formal-green);
+  border-color: var(--formal-green);
+  color: #ffffff;
+}
+
+.formal-milestone.current .formal-node {
+  background: var(--formal-coral);
+  border-color: var(--formal-coral);
+  color: #ffffff;
+}
+
+.formal-milestone-content h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  letter-spacing: -.3px;
+  font-weight: 800;
+}
+
+.formal-milestone-link {
+  color: var(--formal-ink);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s ease;
+}
+
+.formal-milestone-link:hover {
+  color: var(--formal-blue);
+}
+
+.formal-milestone-link .arrow {
+  font-size: 14px;
+  opacity: 0.6;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.formal-milestone-link:hover .arrow {
+  transform: translate(2px, -2px);
+  opacity: 1;
+}
+
+.formal-milestone p {
+  margin: 0;
+  color: var(--formal-muted);
+  font-size: 12px;
+}
+
+.formal-progress-track {
+  height: 5px;
+  background: var(--formal-progress-track);
+  margin-top: 10px;
+  max-width: 500px;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.formal-progress-track span {
+  display: block;
+  height: 100%;
+  background: var(--formal-green);
+  border-radius: 9999px;
+  transition: width 0.5s ease;
+}
+
+.formal-milestone.current .formal-progress-track span {
+  background: var(--formal-coral);
+}
+
+.formal-state {
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  padding: 5px 8px;
+  border: 1px solid var(--formal-line);
+  background: var(--formal-state-bg);
+  white-space: nowrap;
+  border-radius: 2px;
+  color: var(--formal-muted);
+}
+
+.formal-milestone.done .formal-state {
+  color: var(--formal-green);
+  border-color: var(--formal-green);
+  background: var(--formal-green-subtle);
+}
+
+.formal-milestone.current .formal-state {
+  color: var(--formal-coral);
+  border-color: var(--formal-coral);
+  background: var(--formal-coral-subtle);
+}
+
+/* Add Milestone Button Container (separate from vertical line) */
+.formal-add-milestone-wrap {
+  margin-top: 24px;
+  padding-left: 12px;
+}
+
+.formal-add-milestone {
+  border: 1px dashed var(--formal-line-strong);
+  padding: 14px 18px;
+  background: transparent;
+  color: var(--formal-muted);
+  font-size: 12px;
+  font-weight: 750;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.formal-add-milestone:hover {
+  background: var(--formal-card);
+  border-color: var(--formal-blue);
+  color: var(--formal-blue);
+  box-shadow: 2px 2px 0 var(--formal-shadow);
+}
+
+/* Team Section */
+.formal-team {
+  margin-top: 42px;
+  border-top: 2px solid var(--formal-line-strong);
+  padding-top: 24px;
+}
+
+.formal-team-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.formal-team-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--formal-line);
+}
+
+.formal-person {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.formal-person-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--formal-card);
+  border: 1px solid var(--formal-line-strong);
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 15px;
+  color: var(--formal-ink);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 2px 2px 0 var(--formal-shadow);
+  flex-shrink: 0;
+}
+
+.formal-person-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.formal-person strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--formal-ink);
+}
+
+.formal-person small {
+  color: var(--formal-muted);
+  font-size: 12px;
+}
+
+.formal-team-contact {
+  color: var(--formal-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.formal-text-btn {
+  border: 0;
+  background: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--formal-ink);
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.formal-text-btn:hover {
+  color: var(--formal-blue);
+}
+
+.formal-text-btn.danger-link:hover {
+  color: #ef4444;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .formal-intro {
+    grid-template-columns: 1fr;
+  }
+  .formal-intro-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 580px) {
+  .formal-intro-actions {
+    grid-template-columns: 1fr;
+  }
+  .formal-overview {
+    grid-template-columns: 1fr;
+  }
+  .formal-team-row {
+    grid-template-columns: 1fr auto;
+  }
+  .formal-team-contact {
+    grid-column: 1 / -1;
+    padding-left: 54px;
+  }
+}
+</style>
+
+<div class="formal-workspace">
+  {% if startup.is_archived %}
+  <div style="background: rgba(242, 187, 103, 0.12); border: 2px solid #f2bb67; color: #f2bb67; padding: 14px 20px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; box-shadow: 3px 3px 0 var(--formal-shadow);">
+      <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 1.4rem;">📦</span>
+          <div>
+              <strong style="display: block; font-size: 0.95rem; color: #f2bb67;">Archived Startup</strong>
+              <span style="font-size: 0.82rem; color: #d6b27d;">This startup is currently archived. Its records, deliverables, and team members are safely preserved.</span>
+          </div>
+      </div>
+      {% if user.role == 'admin' or user.role == 'super_admin' %}
+      <form method="post" action="{% url 'unarchive_startup' startup.id %}" style="margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="formal-btn" style="background: #f2bb67; color: #171918; border: none; font-weight: 800; font-size: 0.8rem; padding: 8px 16px; cursor: pointer;">
+              Restore Startup <span>↗</span>
+          </button>
+      </form>
+      {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Intro / Hero Section -->
+  <section class="formal-intro" id="startup-header-card">
+    <div class="formal-intro-main">
+      <div class="formal-logo-frame">
+        {% if startup.logo %}
+        <img src="{{ startup.logo.url }}" alt="{{ startup.name }}">
+        {% else %}
+        <span class="formal-logo-placeholder">{{ startup.name|slice:":1" }}</span>
+        {% endif %}
+      </div>
+      <div>
+        <h1>{{ startup.name }}<span class="period">.</span></h1>
+        <div class="formal-subline">
+          <span class="formal-pill">
+            {% if startup.cohort %}{{ startup.cohort.name }}{% else %}No cohort{% endif %}
+          </span>
+          <span class="formal-pill blue">
+            {% if current_milestone %}Current: {{ current_milestone.title }}{% elif completed_milestones_count == total_milestones_count and total_milestones_count > 0 %}All milestones completed{% else %}Milestones defined{% endif %}
+          </span>
+          {% if startup.email %}
+          <a href="mailto:{{ startup.email }}" class="contact-link">↗ &nbsp;{{ startup.email }}</a>
+          {% endif %}
+        </div>
+        {% if startup.description %}
+        <p style="color: var(--formal-muted); font-size: 13px; margin: 12px 0 0; max-width: 650px; line-height: 1.5;">{{ startup.description }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="formal-intro-actions">
+      {% if user.role == 'admin' or user.role == 'super_admin' %}
+      <a href="{% url 'edit_startup' startup.id %}" class="formal-btn primary" id="Edit-startup">
+        Edit startup <span>↗</span>
+      </a>
+      <a href="{% url 'add_member' startup.id %}" class="formal-btn" id="Add-member">
+        + Add member <span>↗</span>
+      </a>
+      <a href="{% url 'startup_report' %}?startup_id={{ startup.id }}" class="formal-btn" id="View-report">
+        Report <span>↗</span>
+      </a>
+      {% if startup.is_archived %}
+      <form method="post" action="{% url 'unarchive_startup' startup.id %}" style="margin: 0; width: 100%;">
+          {% csrf_token %}
+          <button type="submit" class="formal-btn success" id="Archive-startup" style="width: 100%;" onclick="return confirm('Restore this startup from archive?')">
+              Restore startup <span>↗</span>
+          </button>
+      </form>
+      {% else %}
+      <form method="post" action="{% url 'archive_startup' startup.id %}" style="margin: 0; width: 100%;">
+          {% csrf_token %}
+          <button type="submit" class="formal-btn danger" id="Archive-startup" style="width: 100%;" onclick="return confirm('Archive this startup? It will be moved to archived startups.')">
+              Archive startup <span>↗</span>
+          </button>
+      </form>
+      {% endif %}
+      {% endif %}
+
+      {% if user.role == 'incubatee' %}
+      <a href="{% url 'edit_startup' startup.id %}" class="formal-btn" id="Edit-startup">
+        Edit startup <span>↗</span>
+      </a>
+      {% if current_deliverable %}
+      <a href="{% url 'edit_deliverable_page' current_deliverable.id %}" class="formal-btn primary" id="Submit-report">
+        Submit Report <span>↗</span>
+      </a>
+      {% elif current_milestone %}
+      <a href="{% url 'view_milestone' startup.id current_milestone.id %}" class="formal-btn primary" id="Submit-report">
+        Submit Report <span>↗</span>
+      </a>
+      {% else %}
+      <a href="{% url 'submit_progress' startup.id %}" class="formal-btn primary" id="Submit-report">
+        Submit Report <span>↗</span>
+      </a>
+      {% endif %}
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- Overview Metrics -->
+  <section class="formal-overview" id="startup-overview-metrics" aria-label="Startup overview metrics">
+    <div class="formal-metric">
+      <div class="formal-metric-label">Roadmap completion</div>
+      <div class="formal-metric-value">{{ startup.progress }}<small>% of milestones complete</small></div>
+    </div>
+    <div class="formal-metric">
+      <div class="formal-metric-label">Team</div>
+      <div class="formal-metric-value">{{ startup_members.count|stringformat:"02d" }} <small>member{{ startup_members.count|pluralize }}</small></div>
+    </div>
+    <div class="formal-metric">
+      <div class="formal-metric-label">Milestones</div>
+      <div class="formal-metric-value">{{ completed_milestones_count|stringformat:"02d" }} <small>of {{ total_milestones_count|stringformat:"02d" }} done</small></div>
+    </div>
+  </section>
+
+  <!-- Execution & Roadmap Section -->
+  <section id="milestones-section">
+    <div class="formal-section-head">
+      <div>
+        <div class="formal-section-no">01 / EXECUTION</div>
+        <h2>Milestones, in order.</h2>
+        <p>A simple view of what’s done and what comes next.</p>
+      </div>
+      <div class="formal-eyebrow">{{ total_milestones_count }} milestone{{ total_milestones_count|pluralize }}</div>
+    </div>
+
+    <div class="formal-roadmap-wrap">
+      <div class="formal-timeline-list">
+        {% for milestone in milestones %}
+        <article class="formal-milestone {% if milestone.status == 'completed' %}done{% elif milestone.id == current_milestone_id %}current{% else %}upcoming{% endif %}">
+          <div class="formal-node">
+            {% if milestone.status == 'completed' %}
+            ✓
+            {% elif milestone.id == current_milestone_id %}
+            {{ milestone.milestone_progress|default:forloop.counter }}
+            {% else %}
+            {{ milestone.milestone_progress|default:forloop.counter }}
+            {% endif %}
+          </div>
+          <div class="formal-milestone-content">
+            <a href="{% url 'view_milestone' startup.id milestone.id %}" class="formal-milestone-link">
+              <h3>{{ milestone.title }} <span class="arrow">↗</span></h3>
+            </a>
+            <p>
+              {% if milestone.deliverables.first %}
+              {{ milestone.deliverables.first.name }} · {% if milestone.status == 'completed' %}Completed{% elif milestone.id == current_milestone_id %}In progress{% else %}Not started{% endif %}
+              {% else %}
+              No deliverables assigned
+              {% endif %}
+            </p>
+            <div class="formal-progress-track">
+              <span style="width: {{ milestone.progress_percentage }}%;"></span>
+            </div>
+          </div>
+          <span class="formal-state">
+            {% if milestone.status == 'completed' %}
+            100% / Done
+            {% elif milestone.id == current_milestone_id %}
+            {{ milestone.progress_percentage }}% / In progress
+            {% else %}
+            Upcoming / 0%
+            {% endif %}
+          </span>
+        </article>
+        {% empty %}
+        <p class="text-muted" style="padding: 24px 0;">No milestones defined yet.</p>
+        {% endfor %}
+      </div>
+
+      {% if user.role == 'admin' or user.role == 'super_admin' %}
+      <div class="formal-add-milestone-wrap">
+        <button type="button" class="formal-add-milestone" id="add-milestone" onclick="document.getElementById('addCustomMilestoneModal').style.display='flex'">
+          ＋ &nbsp; Add a milestone <span class="arrow">→</span>
+        </button>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- People & Team Section -->
+  <section class="formal-team" id="startup-members-card">
+    <div class="formal-section-head">
+      <div>
+        <div class="formal-section-no">02 / PEOPLE</div>
+        <h2>The team.</h2>
+        <p>Everyone responsible for moving {{ startup.name }} forward.</p>
+      </div>
+    </div>
+
+    <div class="formal-team-list">
+      {% for member in startup_members %}
+      <div class="formal-team-row">
+        <div class="formal-person">
+          <div class="formal-person-icon">
+            {% if member.profile_picture %}
+            <img src="{{ member.profile_picture.url }}" alt="{{ member.username }}">
+            {% else %}
+            {{ member.first_name|default:member.username|slice:":1"|upper }}
+            {% endif %}
+          </div>
+          <div>
+            <strong>{{ member.get_full_name|default:member.username }}</strong>
+            <small>{{ member.role|default:"Workspace member" }}</small>
+          </div>
+        </div>
+        <div class="formal-team-contact">
+          {{ member.email }}{% if member.contact_number %}<br>{{ member.contact_number }}{% endif %}
+        </div>
+        <div>
+          {% if user.role == 'admin' or user.role == 'super_admin' %}
+          <button type="button" class="formal-text-btn danger-link" onclick="openDeleteModal('{{ member.id }}', '{{ startup.id }}', '{{ member.get_full_name|default:member.username }}')">
+            Options ↗
+          </button>
+          {% endif %}
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-muted text-sm" style="padding: 16px 0;">No team members assigned yet.</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<!-- Delete Member Modal -->
+<div id="deleteMemberModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: var(--formal-card); border: 2px solid var(--formal-line-strong); width: 420px; max-width: 90vw; padding: 32px; text-align: center; position: relative; box-shadow: 6px 6px 0 var(--formal-shadow); border-radius: 4px; color: var(--formal-ink);">
+        <button type="button" onclick="document.getElementById('deleteMemberModal').style.display='none'" style="position: absolute; top: 16px; right: 16px; background: none; border: none; cursor: pointer; color: var(--formal-muted); font-size: 1.25rem;">
+            &times;
+        </button>
+        <div class="formal-eyebrow" style="margin-bottom: 8px;">TEAM MANAGEMENT</div>
+        <h3 style="font-family: var(--formal-display); font-size: 1.35rem; margin: 0 0 10px; color: var(--formal-ink);">Manage Member</h3>
+        <p style="color: var(--formal-muted); font-size: 13px; margin: 0 0 24px;">What action would you like to take for <strong id="deleteModalMemberName" style="color: var(--formal-ink);">this user</strong>?</p>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <form id="removeMemberForm" method="post" action="" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="formal-btn" style="width: 100%; justify-content: center; padding: 12px; font-weight: 800;">Remove from Startup Only</button>
+            </form>
+            <form id="deleteAccountForm" method="post" action="" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="formal-btn danger" style="width: 100%; justify-content: center; padding: 12px; font-weight: 800;" onclick="return confirm('WARNING: Are you absolutely sure you want to permanently delete this user account from the entire system? This cannot be undone.')">Delete Account Permanently</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openDeleteModal(memberId, startupId, memberName) {
+    document.getElementById('removeMemberForm').action = '/startups/' + startupId + '/members/' + memberId + '/delete/';
+    document.getElementById('deleteAccountForm').action = '/super-admin/users/' + memberId + '/delete/';
+    document.getElementById('deleteModalMemberName').textContent = memberName;
+    document.getElementById('deleteMemberModal').style.display = 'flex';
+}
+</script>
+
+<!-- Add Custom Milestone Modal -->
+<div id="addCustomMilestoneModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: var(--formal-card); border: 2px solid var(--formal-line-strong); width: 440px; max-width: 90vw; padding: 28px; position: relative; box-shadow: 6px 6px 0 var(--formal-shadow); border-radius: 4px; color: var(--formal-ink);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--formal-line); padding-bottom: 12px;">
+            <div>
+                <div class="formal-eyebrow">NEW ROADMAP STEP</div>
+                <h2 style="font-family: var(--formal-display); font-size: 1.25rem; margin: 4px 0 0; color: var(--formal-ink);">Add Custom Milestone</h2>
+            </div>
+            <button type="button" onclick="document.getElementById('addCustomMilestoneModal').style.display='none'" style="background: none; border: none; cursor: pointer; color: var(--formal-muted); font-size: 1.5rem; line-height: 1;">&times;</button>
+        </div>
+        <form action="{% url 'add_milestone' startup.id %}" method="post">
+            {% csrf_token %}
+            <div style="margin-bottom: 16px;">
+                <label style="font-size:0.8rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:6px; color:var(--formal-muted);">Milestone Name</label>
+                <input type="text" name="title" required placeholder="e.g., Prototype Phase" style="width:100%; font-size:0.9rem; padding:10px 12px; border-radius: 3px; border: 1px solid var(--formal-line); background: var(--formal-paper); color: var(--formal-ink); outline: none; box-sizing: border-box;">
+            </div>
+            <div style="margin-bottom: 24px;">
+                <label style="font-size:0.8rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:6px; color:var(--formal-muted);">Number of Deliverables</label>
+                <input type="number" name="deliverable_count" min="0" value="0" style="width:100%; font-size:0.9rem; padding:10px 12px; border-radius: 3px; border: 1px solid var(--formal-line); background: var(--formal-paper); color: var(--formal-ink); outline: none; box-sizing: border-box;">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="formal-btn" onclick="document.getElementById('addCustomMilestoneModal').style.display='none'">Cancel</button>
+                <button type="submit" class="formal-btn primary">Add Milestone <span>↗</span></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

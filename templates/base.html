@@ -1,0 +1,1559 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incubator System | {% block title %}Dashboard{% endblock %}</title>
+    <script>
+        // FOUC Prevention — runs before any rendering
+        (function() {
+            if (localStorage.getItem('theme') === 'light') {
+                document.documentElement.classList.add('light-mode');
+            }
+            // Apply saved zoom level
+            var zoom = localStorage.getItem('uiZoom');
+            if (zoom) {
+                document.documentElement.style.fontSize = zoom + 'px';
+            }
+        })();
+
+        // ===== Initialize all input box required Design =====
+        // document.addEventListener("DOMContentLoaded", () => {
+        
+        //     const fields = document.querySelectorAll(
+        //         "input[required], textarea[required], select[required]"
+        //     );
+        
+        //     fields.forEach(field => {
+            
+        //         const label = document.querySelector(
+        //             `label[for="${field.id}"]`
+        //         );
+            
+        //         if (!label) return;
+            
+        //         const star = document.createElement("span");
+        //         star.innerHTML = " *";
+        //         star.style.color = "red";
+            
+        //         label.appendChild(star);
+            
+        //         function updateStar() {
+        //             if (field.value.trim() !== "") {
+        //                 star.style.display = "none";
+        //             } else {
+        //                 star.style.display = "inline";
+        //             }
+        //         }
+            
+        //         field.addEventListener("input", updateStar);
+            
+        //         updateStar();
+        //     });
+        
+        // });
+        // ---- Drop box Toggle Others  ----
+        document.addEventListener('DOMContentLoaded', function () {
+        
+            const positionSelect = document.getElementById('position-select');
+            const otherContainer = document.getElementById('other-position-container');
+            const otherInput = document.getElementById('other-position');
+        
+            function toggleOtherPosition() {
+            
+                if (positionSelect.value === 'OTHER') {
+                    otherContainer.style.display = 'block';
+                    otherInput.required = true;
+                } else {
+                    otherContainer.style.display = 'none';
+                    otherInput.required = false;
+                    otherInput.value = '';
+                }
+            }
+        
+            positionSelect.addEventListener('change', toggleOtherPosition);
+        
+            // Hide it when the page first loads
+            toggleOtherPosition();
+        
+        });
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}?v=20261019-3">
+    <script src="{% static 'js/form_enhancements.js' %}?v=20261019-1" defer></script>
+    {% if user.is_authenticated %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css">
+    {% endif %}
+    <link rel="icon" type="image/png" href="{% static 'favicon.png' %}">
+    <style>
+        .driver-popover {
+            color: var(--text-primary) !important;
+            background: var(--bg-secondary) !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: var(--radius-md) !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important;
+            font-family: var(--font-body) !important;
+            padding: 1.25rem !important;
+            max-width: 360px !important;
+            z-index: 100000 !important;
+        }
+
+        .driver-popover-title {
+            color: var(--text-primary) !important;
+            font-family: var(--font-heading) !important;
+            font-size: 1.05rem !important;
+            font-weight: 700 !important;
+            margin-bottom: 0.5rem !important;
+            line-height: 1.3 !important;
+        }
+
+        .driver-popover-description {
+            color: var(--text-secondary) !important;
+            font-size: 0.88rem !important;
+            line-height: 1.5 !important;
+            margin-bottom: 1rem !important;
+        }
+
+        .driver-popover-progress-text {
+            color: var(--text-tertiary) !important;
+            font-size: 0.78rem !important;
+            font-weight: 600 !important;
+        }
+
+        .driver-popover-footer {
+            margin-top: 0.75rem !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-end !important;
+            gap: 0.5rem !important;
+        }
+
+        .driver-popover-skip-btn {
+            position: static !important;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color) !important;
+            border-radius: var(--radius-sm) !important;
+            padding: 0.35rem 0.75rem !important;
+            color: var(--text-secondary) !important;
+            background: transparent !important;
+            font: inherit !important;
+            font-size: 0.8rem !important;
+            cursor: pointer !important;
+            opacity: 1 !important;
+            margin-right: auto !important;
+            transition: all 0.15s ease !important;
+        }
+
+        .driver-popover-skip-btn:hover {
+            color: var(--text-primary) !important;
+            background: var(--subtle-overlay) !important;
+            border-color: var(--text-secondary) !important;
+        }
+
+        .driver-popover-prev-btn {
+            border: 1px solid var(--border-color) !important;
+            border-radius: var(--radius-sm) !important;
+            padding: 0.35rem 0.75rem !important;
+            color: var(--text-secondary) !important;
+            background: var(--bg-primary) !important;
+            font: inherit !important;
+            font-size: 0.8rem !important;
+            text-shadow: none !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease !important;
+        }
+
+        .driver-popover-prev-btn:hover {
+            color: var(--text-primary) !important;
+            background: var(--subtle-overlay) !important;
+        }
+
+        .driver-popover-next-btn {
+            border: 1px solid #2563eb !important;
+            border-radius: var(--radius-sm) !important;
+            padding: 0.35rem 0.85rem !important;
+            background: #2563eb !important;
+            color: #ffffff !important;
+            font: inherit !important;
+            font-size: 0.8rem !important;
+            font-weight: 600 !important;
+            text-shadow: none !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease !important;
+        }
+
+        .driver-popover-next-btn:hover {
+            background: #1d4ed8 !important;
+            border-color: #1d4ed8 !important;
+        }
+
+        /* Light Mode Driver Popover & Button Enhancements */
+        body.light-mode .driver-popover {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid #cbd5e1 !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08) !important;
+        }
+
+        body.light-mode .driver-popover-title {
+            color: #0f172a !important;
+        }
+
+        body.light-mode .driver-popover-description {
+            color: #334155 !important;
+        }
+
+        body.light-mode .driver-popover-progress-text {
+            color: #64748b !important;
+        }
+
+        body.light-mode .driver-popover-prev-btn,
+        body.light-mode .driver-popover-skip-btn {
+            background: #f8fafc !important;
+            color: #334155 !important;
+            border: 1px solid #cbd5e1 !important;
+        }
+
+        body.light-mode .driver-popover-prev-btn:hover,
+        body.light-mode .driver-popover-skip-btn:hover {
+            background: #f1f5f9 !important;
+            color: #0f172a !important;
+            border-color: #94a3b8 !important;
+        }
+
+        body.light-mode .driver-popover-next-btn {
+            background: #2563eb !important;
+            border-color: #2563eb !important;
+            color: #ffffff !important;
+        }
+
+        .help-tour-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.45rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            background: transparent;
+            font: inherit;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: color 0.15s, background 0.15s, border-color 0.15s;
+        }
+
+        .help-tour-button:hover {
+            color: var(--text-primary);
+            background: var(--subtle-overlay);
+        }
+
+        body.light-mode .help-tour-button {
+            border-color: #cbd5e1;
+            color: #475569;
+            background: #ffffff;
+        }
+
+        body.light-mode .help-tour-button:hover {
+            color: #0f172a;
+            background: #f1f5f9;
+            border-color: #94a3b8;
+        }
+
+        /* ====== Sidebar Layout ====== */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 50;
+            overflow-y: auto;
+        }
+
+        .sidebar-profile {
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-color), var(--brand-teal));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: #ffffff;
+            margin: 0 auto 0.75rem;
+            text-transform: uppercase;
+            position: relative;
+        }
+
+        .sidebar-avatar::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 12px;
+            height: 12px;
+            background: var(--success-color);
+            border-radius: 50%;
+            border: 2px solid var(--bg-secondary);
+        }
+
+        .sidebar-username {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.15rem;
+        }
+
+        .sidebar-role {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            text-transform: capitalize;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 1rem 0;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 1.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-link:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        body.light-mode .sidebar-link:hover {
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        .sidebar-link.active {
+            color: var(--accent-color);
+            background: rgba(41, 145, 239, 0.08);
+            border-left-color: var(--accent-color);
+        }
+
+        .sidebar-link .sidebar-icon {
+            font-size: 1.1rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sidebar-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .sidebar-footer-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: color 0.15s;
+        }
+
+        .sidebar-footer-link:hover {
+            color: var(--text-primary);
+        }
+
+        .sidebar-footer-link.danger:hover {
+            color: var(--danger-color);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
+        }
+
+        .main-content.no-sidebar,
+        .app-layout.no-sidebar .main-content {
+            margin-left: 0;
+            width: 100%;
+        }
+
+        /* Top Bar */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            position: sticky;
+            top: 0;
+            z-index: 40;
+        }
+
+        .topbar-brand {
+            display: flex;
+            align-items: center;
+        }
+
+        .topbar-nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0.4rem 0.85rem;
+            border-radius: var(--radius-md);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
+
+        .topbar-nav-link:hover {
+            color: var(--text-primary);
+            background: var(--subtle-overlay);
+        }
+
+        .topbar-nav-link.active {
+            color: var(--brand-blue);
+            background: rgba(41, 145, 239, 0.1);
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-left: auto;
+        }
+
+        .topbar .nav-icon {
+            position: relative;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            border-radius: 9px;
+            font-size: 1.15rem;
+            cursor: pointer;
+            width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: all 0.15s ease;
+        }
+
+        .topbar .nav-icon:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.16);
+        }
+
+        body.light-mode .topbar .nav-icon {
+            background: #ffffff;
+            border-color: #e2e8f0;
+            color: #475569;
+        }
+
+        body.light-mode .topbar .nav-icon:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+
+        .topbar .badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background-color: var(--danger-color);
+            color: white;
+            border-radius: 999px;
+            padding: 1px 5px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            line-height: 1.2;
+            min-width: 17px;
+            text-align: center;
+            box-shadow: 0 0 0 2px var(--bg-secondary);
+        }
+
+        .notification-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: 380px;
+            background-color: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--border-color);
+            z-index: 1000;
+            display: none;
+            max-height: 440px;
+            overflow-y: auto;
+        }
+
+        .notification-dropdown.show {
+            display: block;
+        }
+
+        .notification-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .notification-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: block;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.86rem;
+            line-height: 1.42;
+            transition: background-color 0.15s;
+        }
+
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+
+        .notification-item:hover {
+            background-color: rgba(255, 255, 255, 0.04);
+        }
+
+        body.light-mode .notification-item:hover {
+            background-color: #f8fafc;
+        }
+
+        .notification-item.unread {
+            background-color: rgba(41, 145, 239, 0.08);
+            border-left: 3px solid var(--accent-color);
+        }
+
+        body.light-mode .notification-item.unread {
+            background-color: #f0f7ff;
+        }
+
+        .notification-time {
+            font-size: 0.72rem;
+            color: var(--text-tertiary);
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .notification-empty {
+            padding: 28px 20px;
+            text-align: center;
+            color: var(--text-tertiary);
+            font-size: 0.88rem;
+        }
+
+        .topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.35rem 0.75rem;
+            border-radius: var(--radius-md);
+            transition: background 0.15s;
+            position: relative;
+        }
+
+        .topbar-user:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        body.light-mode .topbar-user:hover {
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        .topbar-user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-color), var(--brand-teal));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: #ffffff;
+            text-transform: uppercase;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            width: 200px;
+            background-color: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            z-index: 1000;
+            display: none;
+            margin-top: 8px;
+        }
+
+        .user-dropdown.show {
+            display: block;
+        }
+
+        .user-dropdown-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            transition: background-color 0.15s;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border-left: none;
+            border-right: none;
+            border-top: none;
+        }
+
+        .user-dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-dropdown-item:hover {
+            background-color: rgba(255, 255, 255, 0.04);
+        }
+
+        body.light-mode .user-dropdown-item:hover {
+            background-color: rgba(0, 0, 0, 0.04);
+        }
+
+        /* Sidebar Logo */
+        .sidebar-logo {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-logo img {
+            height: 50px;
+        }
+
+        /* timeline-container-date-name */
+        .timeline-container-date-name {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+        }
+
+        /* Main content area padding */
+        .main-body {
+            padding: 2rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    {% if user.is_authenticated %}
+    <!-- ====== SIDEBAR + LAYOUT ====== -->
+    <div class="app-layout{% if user.role == 'incubatee' %} no-sidebar{% endif %}">
+        {% if user.role != 'incubatee' %}
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <a href="{% url 'dashboard' %}" id="tour-brand">
+                    <img src="{% static 'img/logo-dark-mode.png' %}" alt="Icebox Logo" class="logo-dark">
+                    <img src="{% static 'img/logo-light-mode.png' %}" alt="Icebox Logo" class="logo-light"
+                        style="display: none;">
+                </a>
+            </div>
+
+            <div class="sidebar-profile" id="tour-profile">
+                {% if user.profile_picture %}
+                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" class="sidebar-avatar" style="object-fit: cover;">
+                {% else %}
+                    <div class="sidebar-avatar">
+                        {{ user.first_name|slice:":1" }}{{ user.last_name|slice:":1" }}
+                    </div>
+                {% endif %}
+                
+                <div class="sidebar-username">{{ user.get_full_name|default:user.username }}</div>
+                
+                <div class="sidebar-role">{{ user.get_role_display }}</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="{% url 'dashboard' %}"
+                    id="tour-dashboard"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <span class="sidebar-icon">📊</span> Dashboard
+                </a>
+
+                {% if user.role == 'admin' or user.role == 'super_admin' %}
+                <a href="{% url 'startups_list' %}"
+                    id="tour-startups"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'startups_list' or request.resolver_match.url_name == 'add_startup' %}active{% endif %}">
+                    <span class="sidebar-icon">🚀</span> Startups
+                </a>
+                <a href="{% url 'reports' %}"
+                    id="tour-reports"
+                    class="sidebar-link {% if 'report' in request.resolver_match.url_name %}active{% endif %}">
+                    <span class="sidebar-icon">📄</span> Reports
+                </a>
+                {% endif %}
+
+            </nav>
+        </aside>
+        {% endif %}
+
+        <div class="main-content{% if user.role == 'incubatee' %} no-sidebar{% endif %}">
+            <div class="topbar">
+                {% if user.role == 'incubatee' %}
+                <div class="topbar-brand">
+                    <a href="{% url 'dashboard' %}" id="tour-brand" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
+                        <img src="{% static 'img/logo-dark-mode.png' %}" alt="Icebox Logo" class="logo-dark" style="height: 34px;">
+                        <img src="{% static 'img/logo-light-mode.png' %}" alt="Icebox Logo" class="logo-light" style="display: none; height: 34px;">
+                    </a>
+                </div>
+                {% endif %}
+                <div class="topbar-right">
+                    <button type="button" id="help-tour-button" class="help-tour-button" aria-label="Restart the help tour">
+                        <i class="bi bi-question-circle" aria-hidden="true"></i>
+                        <span>Help Tour</span>
+                    </button>
+                    <div style="position: relative;">
+                        <button id="notification-toggle" class="nav-icon" aria-label="Notifications" title="Notifications">
+                            <i class="bi bi-bell-fill"></i>
+                            {% if unread_notifications_count > 0 %}
+                            <span class="badge">{{ unread_notifications_count }}</span>
+                            {% endif %}
+                        </button>
+
+                        <div id="notification-dropdown" class="notification-dropdown">
+                            <div class="notification-header">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <i class="bi bi-bell" style="color: var(--accent-color);"></i>
+                                    <span>Notifications</span>
+                                </div>
+                                {% if unread_notifications %}
+                                <div style="display: flex; gap: 12px; align-items: center;">
+                                    <span class="text-sm font-semibold" style="color: var(--accent-color);">{{ unread_notifications_count }} Unread</span>
+                                    <form method="post" action="{% url 'clear_notifications' %}" style="margin: 0;">
+                                        {% csrf_token %}
+                                        <button type="submit" style="background: none; border: none; color: var(--danger-color); font-size: 0.8rem; cursor: pointer; padding: 0; font-weight: 500; transition: opacity 0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1">Clear All</button>
+                                    </form>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            {% if unread_notifications %}
+                            {% for notif in unread_notifications %}
+                            <a href="{% url 'read_notification' notif.id %}" class="notification-item unread">
+                                <div>{{ notif.message }}</div>
+                                <span class="notification-time">
+                                    <i class="bi bi-clock" style="font-size: 0.7rem;"></i>
+                                    {{ notif.created_at|timesince }} ago
+                                </span>
+                            </a>
+                            {% endfor %}
+                            {% else %}
+                            <div class="notification-empty">
+                                <i class="bi bi-bell-slash" style="font-size: 1.6rem; display: block; margin-bottom: 8px; opacity: 0.5;"></i>
+                                No new notifications
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="topbar-user" id="user-menu-toggle">
+                        {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" class="topbar-user-avatar"
+                            style="object-fit: cover;">
+                        {% else %}
+                        <div class="topbar-user-avatar">
+                            {{ user.first_name|slice:":1" }}{{ user.last_name|slice:":1" }}
+                        </div>
+                        {% endif %}
+                        <span class="text-sm font-bold" style="color: var(--text-primary);">{{ user.username }}</span>
+                        <span style="font-size: 0.7rem; color: var(--text-tertiary);">▼</span>
+
+                        <div id="user-dropdown" class="user-dropdown">
+                            {% if user.role == 'super_admin' %}
+                            <a href="{% url 'add_admin' %}" class="user-dropdown-item">
+                                Manage Admins
+                            </a>
+                            {% endif %}
+                            <a href="{% url 'settings' %}" class="user-dropdown-item">
+                                Settings
+                            </a>
+                            <button id="theme-toggle" class="user-dropdown-item" style="border-radius: 0;">
+                                <span id="theme-label">Dark Mode</span>
+                                <span id="theme-icon">🌙</span>
+                            </button>
+                            <form method="POST" action="{% url 'logout' %}" style="margin: 0; width: 100%;">
+                                {% csrf_token %}
+                                <button type="submit" class="user-dropdown-item" style="color: var(--danger-color); background: none; border: none; width: 100%; text-align: left; cursor: pointer; font-size: inherit; font-family: inherit; display: flex; align-items: center; border-radius: 0;">
+                                    Logout
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-body">
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'danger' %}error{% else %}{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% endif %}
+
+                {% block content %}
+                {% endblock %}
+
+                {% if user.is_authenticated %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if user.is_authenticated %}
+    <script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.js.iife.js"></script>
+    {% endif %}
+    <script>
+        // Theme Toggler Logic
+        const toggleBtn = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const themeLabel = document.getElementById('theme-label');
+        const body = document.body;
+
+        // Apply saved theme to body (documentElement was set in head for FOUC)
+        function applyThemeUI() {
+            const isLight = localStorage.getItem('theme') === 'light';
+            if (isLight) {
+                body.classList.add('light-mode');
+            } else {
+                body.classList.remove('light-mode');
+            }
+            if (themeIcon) themeIcon.textContent = isLight ? '☀️' : '🌙';
+            if (themeLabel) themeLabel.textContent = isLight ? 'Light Mode' : 'Dark Mode';
+        }
+
+        // Apply on load
+        applyThemeUI();
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                const isCurrentlyLight = body.classList.contains('light-mode');
+                const newTheme = isCurrentlyLight ? 'dark' : 'light';
+                localStorage.setItem('theme', newTheme);
+
+                // Toggle on both body and documentElement
+                body.classList.toggle('light-mode');
+                document.documentElement.classList.toggle('light-mode');
+
+                const isLight = newTheme === 'light';
+                if (themeIcon) themeIcon.textContent = isLight ? '☀️' : '🌙';
+                if (themeLabel) themeLabel.textContent = isLight ? 'Light Mode' : 'Dark Mode';
+            });
+        }
+
+        // Notification Dropdown Logic
+        const notifToggle = document.getElementById('notification-toggle');
+        const notifDropdown = document.getElementById('notification-dropdown');
+
+        if (notifToggle && notifDropdown) {
+            notifToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                notifDropdown.classList.toggle('show');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
+                    notifDropdown.classList.remove('show');
+                }
+            });
+        }
+
+        // User Menu Logic
+        const userToggleBtn = document.getElementById('user-menu-toggle');
+        const userDropdown = document.getElementById('user-dropdown');
+
+        if (userToggleBtn && userDropdown) {
+            userToggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('show');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!userToggleBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+                    userDropdown.classList.remove('show');
+                }
+            });
+        }
+
+
+        // Onboarding Tour Logic    
+        {% if user.is_authenticated %}
+        const tourStorageKey = 'iceboxOnboardingTourCompleted_{{ user.id }}';
+        const userRole = '{{ user.role }}';
+
+        // Dashboard steps for Admin and Super Admin
+        function getAdminDashboardSteps() {
+            return [
+                {
+                    element: '#tour-brand',
+                    popover: {
+                        title: 'Welcome to Icebox',
+                        description: 'Use the Icebox logo to return to your dashboard from anywhere in the system.'
+                    }
+                },
+                {
+                    element: '#tour-profile',
+                    popover: {
+                        title: 'Your Profile',
+                        description: 'Your account name and role privileges are displayed here.'
+                    }
+                },
+                {
+                    element: '#tour-dashboard',
+                    popover: {
+                        title: 'Dashboard',
+                        description: 'Your central hub for overview metrics and activity summary.'
+                    }
+                },
+                {
+                    element: '#tour-startups',
+                    popover: {
+                        title: 'Startups Directory',
+                        description: 'Manage startup cohorts, records, and progress roadmap details.'
+                    }
+                },
+                {
+                    element: '#tour-reports',
+                    popover: {
+                        title: 'Reports Center',
+                        description: 'Generate aggregated cohort reports and startup performance reviews.'
+                    }
+                },
+                {
+                    element: '#notification-toggle',
+                    popover: {
+                        title: 'Notifications',
+                        description: 'Review urgent submission alerts, approval notices, and system updates.'
+                    }
+                },
+                {
+                    element: '#user-menu-toggle',
+                    popover: {
+                        title: 'Account & Settings',
+                        description: 'Access system configuration, appearance modes, and sign-out controls.'
+                    }
+                },
+                {
+                    element: '#total-users-card',
+                    popover: {
+                        title: 'Total Users',
+                        description: 'Overview of all active founders, team members, and admins.'
+                    }
+                },
+                {
+                    element: '#total-startups-card',
+                    popover: {
+                        title: 'Active Startups',
+                        description: 'The number of startups currently enrolled in your incubator programs.'
+                    }
+                },
+                {
+                    element: '#total-admins-card',
+                    popover: {
+                        title: 'Administrators',
+                        description: 'Number of active program directors and administrators managing the incubator.'
+                    }
+                },
+                {
+                    element: '#startups-panel',
+                    popover: {
+                        title: 'Startups Overview',
+                        description: 'Quick-access panel listing startups, active milestones, and progress bars.'
+                    }
+                },
+                {
+                    element: '#add-startup-button',
+                    popover: {
+                        title: 'Add New Startup',
+                        description: 'Quickly register a new startup company and assign its initial cohort.'
+                    }
+                },
+                {
+                    element: '#calendar-widget',
+                    popover: {
+                        title: 'Calendar & Schedule',
+                        description: 'Browse upcoming deadlines, deliverables, and review dates.'
+                    }
+                },
+                {
+                    element: '#upcoming-deliverables-widget',
+                    popover: {
+                        title: 'Upcoming Deliverables',
+                        description: 'Monitor approaching milestone deliverables across all active startups.'
+                    }
+                },
+                {
+                    element: '#admins-panel',
+                    popover: {
+                        title: 'Administrators Panel',
+                        description: 'Manage administrator accounts and system permissions.'
+                    }
+                },
+                {
+                    element: '#add-admin-button',
+                    popover: {
+                        title: 'Add Administrator',
+                        description: 'Invite new administrative staff to help coordinate incubation programs.'
+                    }
+                },
+                {
+                    element: '#help-tour-button',
+                    popover: {
+                        title: 'Need a Refresher?',
+                        description: 'Select Help Tour anytime to replay this interactive walkthrough.'
+                    }
+                }
+            ];
+        }
+
+        // Dashboard steps for Incubatees
+        function getIncubateeDashboardSteps() {
+            return [
+                {
+                    element: '#tour-brand',
+                    popover: {
+                        title: 'Welcome to Icebox',
+                        description: 'Click the Icebox logo anytime to return to your dashboard.'
+                    }
+                },
+                {
+                    element: '#notification-toggle',
+                    popover: {
+                        title: 'Notifications',
+                        description: 'Receive real-time feedback, revision alerts, and approval notices on your submissions.'
+                    }
+                },
+                {
+                    element: '#user-menu-toggle',
+                    popover: {
+                        title: 'Account Menu',
+                        description: 'Toggle between dark and light appearance modes, view settings, or log out.'
+                    }
+                },
+                {
+                    element: '#incubatee-startup-card',
+                    popover: {
+                        title: 'Your Startup',
+                        description: 'Each card summarizes your company, team status, and active milestone.'
+                    }
+                },
+                {
+                    element: '#incubatee-milestone-badge',
+                    popover: {
+                        title: 'Current Milestone',
+                        description: 'Shows the active stage of your incubator journey that is currently in progress.'
+                    }
+                },
+                {
+                    element: '#incubatee-stats-preview',
+                    popover: {
+                        title: 'Milestones & Reports',
+                        description: 'At-a-glance tally of total milestones defined and progress reports submitted.'
+                    }
+                },
+                {
+                    element: '#incubatee-actions-row',
+                    popover: {
+                        title: 'Quick Actions',
+                        description: 'Open your complete startup dashboard or jump straight to submitting your progress deliverables.'
+                    }
+                },
+                {
+                    element: '#help-tour-button',
+                    popover: {
+                        title: 'Need Guidance?',
+                        description: 'Click Help Tour anytime to replay this walkthrough on any page.'
+                    }
+                }
+            ];
+        }
+
+        // Startups List Tour Steps (/startups/)
+        function getStartupsListSteps() {
+            return [
+                {
+                    element: '#page-heading',
+                    popover: {
+                        title: 'Startups Directory',
+                        description: 'Explore and manage all ventures registered across incubator cohorts.'
+                    }
+                },
+                {
+                    element: '#add-startup-button',
+                    popover: {
+                        title: 'Add Startup',
+                        description: 'Click here to register a new startup company and assign its cohort and owner.'
+                    }
+                },
+                {
+                    element: '#search-input',
+                    popover: {
+                        title: 'Search Startups',
+                        description: 'Search startup names or descriptions in real time.'
+                    }
+                },
+                {
+                    element: '#filter-wrapper',
+                    popover: {
+                        title: 'Filter Options',
+                        description: 'Filter startups by status (Active, Completed, Archived) or view members of a specific cohort.'
+                    }
+                },
+                {
+                    element: '#startups-grid',
+                    popover: {
+                        title: 'Startup Cards',
+                        description: 'Click any card to open the complete startup execution roadmap, deliverables, and team roster.'
+                    }
+                },
+                {
+                    element: '#help-tour-button',
+                    popover: {
+                        title: 'Help Tour',
+                        description: 'Click here anytime for a quick refresher on using this directory.'
+                    }
+                }
+            ];
+        }
+
+        // Startup Detail Tour Steps (/startups/<id>/)
+        function getStartupDetailSteps() {
+            return [
+                {
+                    element: '#startup-header-card',
+                    popover: {
+                        title: 'Startup Profile',
+                        description: 'Displays the startup name, cohort assignment, current milestone status, and contact details.'
+                    }
+                },
+                {
+                    element: '#startup-overview-metrics',
+                    popover: {
+                        title: 'Overview Metrics',
+                        description: 'High-level metrics tracking overall roadmap completion, team size, and milestone progress.'
+                    }
+                },
+                {
+                    element: '#Edit-startup',
+                    popover: {
+                        title: 'Edit Startup',
+                        description: 'Update startup details, brand logo, description, and contact info.'
+                    }
+                },
+                {
+                    element: '#Add-member',
+                    popover: {
+                        title: 'Add Team Member',
+                        description: 'Assign founders and contributors to collaborate on this startup.'
+                    }
+                },
+                {
+                    element: '#Archive-startup',
+                    popover: {
+                        title: 'Archive / Restore',
+                        description: 'Safely archive this startup. All historical submissions and deliverables remain preserved.'
+                    }
+                },
+                {
+                    element: '#Submit-report',
+                    popover: {
+                        title: 'Submit Progress',
+                        description: 'Jump directly to the active milestone or deliverable submission page.'
+                    }
+                },
+                {
+                    element: '#milestones-section',
+                    popover: {
+                        title: 'Execution Roadmap',
+                        description: 'Step-by-step milestone progression. Click any milestone to view its deliverables, review statuses, and requirements.'
+                    }
+                },
+                {
+                    element: '#add-milestone',
+                    popover: {
+                        title: 'Add Milestone',
+                        description: 'Insert a new custom milestone stage into this startup roadmap.'
+                    }
+                },
+                {
+                    element: '#startup-members-card',
+                    popover: {
+                        title: 'Team Roster',
+                        description: 'View founders and members associated with this startup.'
+                    }
+                },
+                {
+                    element: '#help-tour-button',
+                    popover: {
+                        title: 'Need a Refresher?',
+                        description: 'Select Help Tour anytime to replay this walkthrough.'
+                    }
+                }
+            ];
+        }
+
+        // Milestone View Tour Steps (/startups/<id>/milestones/<id>/)
+        function getMilestoneSteps() {
+            return [
+                {
+                    element: '#milestoneHeader',
+                    popover: {
+                        title: 'Milestone Header',
+                        description: 'Shows the startup name, milestone stage, title, and guidelines.'
+                    }
+                },
+                {
+                    element: '#milestoneProgressContainer',
+                    popover: {
+                        title: 'Milestone Progress',
+                        description: 'Circular progress ring showing the approved fraction of required deliverables.'
+                    }
+                },
+                {
+                    element: '#deliverableList',
+                    popover: {
+                        title: 'Deliverables Sequence',
+                        description: 'The roadmap of required submissions. Click any deliverable to view instructions or submit files.'
+                    }
+                },
+                {
+                    element: '#timelineItem',
+                    popover: {
+                        title: 'Deliverable Item',
+                        description: 'Each item displays its due date, completion status, and direct link.'
+                    }
+                },
+                {
+                    element: '#timelineDot',
+                    popover: {
+                        title: 'Deliverable Status',
+                        description: 'Status icons indicate progress: green for completed, blue for in review, orange for needs attention, and gray for upcoming.'
+                    }
+                },
+                {
+                    element: '#add-deliverable-btn',
+                    popover: {
+                        title: 'Add Custom Deliverable',
+                        description: 'Admins can create and attach customized deliverables to this milestone.'
+                    }
+                },
+                {
+                    element: '#milestoneOverviewSidebar',
+                    popover: {
+                        title: 'Milestone Overview & Status',
+                        description: 'Summary of progress percentage, status color key, and milestone sign-off controls.'
+                    }
+                },
+                {
+                    element: '#milestone-readiness-assessment',
+                    popover: {
+                        title: 'Readiness Assessment',
+                        description: 'Evaluate readiness levels across commercial, technical, and regulatory dimensions.'
+                    }
+                },
+                {
+                    element: '#help-tour-button',
+                    popover: {
+                        title: 'Need a Refresher?',
+                        description: 'Select Help Tour anytime to replay this walkthrough.'
+                    }
+                }
+            ];
+        }
+
+        // Edit Deliverable Tour Steps (/deliverables/<id>/edit/)
+        function getEditDeliverableSteps() {
+            return [
+                {
+                    element: '#deliverableHeader',
+                    popover: {
+                        title: 'Deliverable Details',
+                        description: 'Review the deliverable name, parent startup, and due date schedule.'
+                    }
+                },
+                {
+                    element: '#deliverableRequirements',
+                    popover: {
+                        title: 'Requirements & Instructions',
+                        description: 'Clear guidelines, criteria, and objectives for completing this deliverable.'
+                    }
+                },
+                {
+                    element: '#deliverableReferenceMaterials',
+                    popover: {
+                        title: 'Reference Materials',
+                        description: 'Download templates, view recommended guides, and access admin reference materials.'
+                    }
+                },
+                {
+                    element: '#deliverableCommentsSection',
+                    popover: {
+                        title: 'Class Comments & Feedback',
+                        description: 'Post questions or discuss review feedback directly between founders and advisors.'
+                    }
+                },
+                {
+                    element: '#deliverableSubmissionCard',
+                    popover: {
+                        title: 'Submission & Review',
+                        description: 'Upload files, provide links, write text responses, or submit for evaluation.'
+                    }
+                },
+                {
+                    element: '#deliverableReadinessCard',
+                    popover: {
+                        title: 'Readiness Level Assessment',
+                        description: 'Set and verify specific readiness level milestones (TRL, CRL, etc.).'
+                    }
+                },
+                {
+                    element: '#help-tour-button',
+                    popover: {
+                        title: 'Need a Refresher?',
+                        description: 'Select Help Tour anytime to replay this walkthrough.'
+                    }
+                }
+            ];
+        }
+
+        // Reports Tour Steps (/reports/)
+        function getReportSteps() {
+            return [
+                {
+                    element: '#reports-header',
+                    popover: {
+                        title: 'Reports Center',
+                        description: 'Generate aggregated cohort performance summaries or in-depth startup reports.'
+                    }
+                },
+                {
+                    element: '#cohort-select',
+                    popover: {
+                        title: 'Select Cohort',
+                        description: 'Choose a cohort to aggregate progress data or view member startups.'
+                    }
+                },
+                {
+                    element: '#btn-generate-cohort-report',
+                    popover: {
+                        title: 'Generate Cohort Report',
+                        description: 'Produces a comprehensive cohort-level breakdown of roadmap progress and readiness.'
+                    }
+                },
+                {
+                    element: '#startups-list',
+                    popover: {
+                        title: 'Individual Startup Reports',
+                        description: 'Pick any enrolled startup to generate an individualized progress and evaluation report.'
+                    }
+                },
+                {
+                    element: '#help-tour-button',
+                    popover: {
+                        title: 'Need a Refresher?',
+                        description: 'Select Help Tour anytime to replay this walkthrough.'
+                    }
+                }
+            ];
+        }
+
+        // Generic fallback steps for other pages
+        function getGenericSteps() {
+            return [
+                {
+                    element: '#tour-brand',
+                    popover: {
+                        title: 'Welcome to Icebox',
+                        description: 'Use the Icebox logo to return to your dashboard from anywhere in the system.'
+                    }
+                },
+                {
+                    element: '#notification-toggle',
+                    popover: {
+                        title: 'Notifications',
+                        description: 'Check notifications for updates and items requiring your attention.'
+                    }
+                },
+                {
+                    element: '#user-menu-toggle',
+                    popover: {
+                        title: 'Account Menu',
+                        description: 'Manage settings, switch between dark and light themes, or log out.'
+                    }
+                },
+                {
+                    element: '.main-body',
+                    popover: {
+                        title: 'Page Workspace',
+                        description: 'Main workspace displaying content and actions for this page.'
+                    }
+                },
+                {
+                    element: '#help-tour-button',
+                    popover: {
+                        title: 'Help Tour',
+                        description: 'Click Help Tour anytime to guide you through any page.'
+                    }
+                }
+            ];
+        }
+
+        function startHelpTour() {
+            const createDriver = window.driver?.js?.driver;
+            if (typeof createDriver !== 'function') {
+                console.error('The onboarding tour could not start because Driver.js did not load.');
+                return;
+            }
+
+            const path = window.location.pathname.toLowerCase();
+            let rawSteps = [];
+
+            if (path.includes('/deliverables/') && path.includes('/edit')) {
+                rawSteps = getEditDeliverableSteps();
+            } else if (path.includes('/milestones/')) {
+                rawSteps = getMilestoneSteps();
+            } else if (path.includes('/reports')) {
+                rawSteps = getReportSteps();
+            } else if (/^\/startups\/\d+/.test(path)) {
+                rawSteps = getStartupDetailSteps();
+            } else if (path.startsWith('/startups')) {
+                rawSteps = getStartupsListSteps();
+            } else if (path.includes('/dashboard') || path === '/' || path === '') {
+                rawSteps = (userRole === 'incubatee') ? getIncubateeDashboardSteps() : getAdminDashboardSteps();
+            } else {
+                rawSteps = getGenericSteps();
+            }
+
+            // DYNAMIC FILTERING: only keep steps for elements present in the DOM right now
+            const validSteps = rawSteps.filter((step) => {
+                if (!step.element) return false;
+                const el = document.querySelector(step.element);
+                return el !== null;
+            });
+
+            if (validSteps.length === 0) {
+                console.warn('No active tour steps found on this page.');
+                return;
+            }
+
+            const tour = createDriver({
+                animate: true,
+                duration: 350,
+                smoothScroll: true,
+                showProgress: true,
+                progressText: '{% templatetag openvariable %}current{% templatetag closevariable %} of {% templatetag openvariable %}total{% templatetag closevariable %}',
+                showButtons: ['next', 'previous', 'close'],
+                nextBtnText: 'Next',
+                prevBtnText: 'Previous',
+                doneBtnText: 'Done',
+                steps: validSteps,
+                onPopoverRender: (popover) => {
+                    if (popover && popover.closeButton && popover.footer) {
+                        const skipButton = popover.closeButton;
+                        skipButton.textContent = 'Skip';
+                        skipButton.classList.add('driver-popover-skip-btn');
+                        if (skipButton.parentElement !== popover.footer) {
+                            popover.footer.insertBefore(skipButton, popover.footer.firstChild);
+                        }
+                    }
+                },
+                onCloseClick: () => tour.destroy(),
+                onDestroyed: () => localStorage.setItem(tourStorageKey, 'true')
+            });
+
+            tour.drive();
+        }
+
+        window.startHelpTour = startHelpTour;
+
+        const helpBtn = document.getElementById('help-tour-button');
+        if (helpBtn) {
+            helpBtn.addEventListener('click', startHelpTour);
+        }
+
+        if (localStorage.getItem(tourStorageKey) !== 'true') {
+            setTimeout(() => {
+                startHelpTour();
+            }, 600);
+        }
+        {% endif %}
+    </script>
+</body>
+
+</html>
