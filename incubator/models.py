@@ -205,6 +205,7 @@ class MilestoneTemplate(models.Model):
     description = models.TextField(blank=True, null=True)
     milestone_progress = models.IntegerField(help_text="Order or index of the milestone")
     created_at = models.DateTimeField(default=timezone.now)
+    rl_templates = models.ManyToManyField('RLTemplate', blank=True, related_name='milestone_templates')
 
     def __str__(self):
         return f"Template: {self.title} (Index: {self.milestone_progress})"
@@ -217,6 +218,7 @@ class DeliverableTemplate(models.Model):
     admin_link = models.URLField(max_length=500, blank=True, null=True)
     admin_link_title = models.CharField(max_length=500, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
+    rl_templates = models.ManyToManyField('RLTemplate', blank=True, related_name='deliverable_templates')
 
     def __str__(self):
         return f"{self.milestone_template.title} - {self.name}"

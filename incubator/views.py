@@ -455,7 +455,7 @@ def add_startup(request):
             
             # Create milestones and deliverables from Global Templates
             starting_milestone = int(form.cleaned_data.get('starting_milestone', 1))
-            milestone_templates = MilestoneTemplate.objects.all().order_by('milestone_progress')
+            milestone_templates = MilestoneTemplate.objects.all().prefetch_related('rl_templates', 'deliverable_templates__rl_templates').order_by('milestone_progress')
             
             for mt in milestone_templates:
                 i = mt.milestone_progress
@@ -471,11 +471,18 @@ def add_startup(request):
                     completed_at=completed_time
                 )
                 
+                # Auto-instantiate Milestone Readiness from MilestoneTemplate
+                for rl_t in mt.rl_templates.all():
+                    MilestoneReadiness.objects.get_or_create(
+                        milestone=milestone,
+                        name=rl_t.name
+                    )
+                
                 deliverable_status = 'approved' if i < starting_milestone else 'pending'
                 
                 # Instantiate deliverables from the templates and map the template FK
                 for position, dt in enumerate(mt.deliverable_templates.all()):
-                    Deliverable.objects.create(
+                    deliverable = Deliverable.objects.create(
                         milestone=milestone,
                         position=position,
                         template=dt,
@@ -483,6 +490,12 @@ def add_startup(request):
                         requirements=dt.requirements or "See template requirements",
                         status=deliverable_status
                     )
+                    # Auto-instantiate Deliverable Readiness from DeliverableTemplate
+                    for rl_t in dt.rl_templates.all():
+                        Readiness.objects.get_or_create(
+                            deliverable=deliverable,
+                            name=rl_t.name
+                        )
 
             messages.success(request, 'Startup created! Now add members.')
             return redirect('add_member', startup_id=startup.id)
@@ -1550,9 +1563,15 @@ def settings_view(request):
             return redirect('settings')
                 
     # Admin global templates
-    milestone_templates = MilestoneTemplate.objects.all().order_by('milestone_progress') if is_admin else None
+    milestone_templates = (
+        MilestoneTemplate.objects.all()
+        .prefetch_related('rl_templates', 'deliverable_templates__rl_templates', 'deliverable_templates__resources')
+        .order_by('milestone_progress')
+        if is_admin else None
+    )
     cohorts = Cohort.objects.all().order_by('-start_date') if user.role == 'super_admin' else None
     rl_templates = RLTemplate.objects.all().prefetch_related('levels') if user.role == 'super_admin' else None
+    all_rl_templates = RLTemplate.objects.all().order_by('id') if is_admin else None
 
     context = {
         'is_admin': is_admin,
@@ -1560,8 +1579,63 @@ def settings_view(request):
         'milestone_templates': milestone_templates,
         'cohorts': cohorts,
         'rl_templates': rl_templates,
+        'all_rl_templates': all_rl_templates,
     }
     return render(request, 'settings/index.html', context)
+
+def sync_deliverable_template_readiness(dt):
+    """
+    Propagates readiness levels from DeliverableTemplate to all matching Deliverables
+    for existing startups without overwriting or deleting any existing assessments.
+    """
+    rl_templates = list(dt.rl_templates.all())
+    rl_names = {rl.name for rl in rl_templates}
+    deliverables = Deliverable.objects.filter(
+        Q(template=dt) |
+        Q(milestone__milestone_progress=dt.milestone_template.milestone_progress, name=dt.name)
+    )
+    for deliv in deliverables:
+        for rl in rl_templates:
+            Readiness.objects.get_or_create(deliverable=deliv, name=rl.name)
+        deliv.readiness_levels.filter(
+            Q(incubatee_level__isnull=True) | Q(incubatee_level=''),
+            Q(admin_level__isnull=True) | Q(admin_level='')
+        ).exclude(name__in=rl_names).delete()
+
+
+def sync_milestone_template_readiness(mt):
+    """
+    Propagates readiness levels from MilestoneTemplate to all matching Milestones
+    for existing startups without overwriting any existing assessments.
+    """
+    rl_templates = list(mt.rl_templates.all())
+    rl_names = {rl.name for rl in rl_templates}
+    milestones = Milestone.objects.filter(milestone_progress=mt.milestone_progress)
+    for ms in milestones:
+        for rl in rl_templates:
+            MilestoneReadiness.objects.get_or_create(milestone=ms, name=rl.name)
+        ms.readiness_levels.filter(
+            Q(incubatee_level__isnull=True) | Q(incubatee_level=''),
+            Q(admin_level__isnull=True) | Q(admin_level='')
+        ).exclude(name__in=rl_names).delete()
+
+
+def sync_all_templates_readiness():
+    """Sync all milestone and deliverable templates to existing startups."""
+    for mt in MilestoneTemplate.objects.prefetch_related('rl_templates', 'deliverable_templates__rl_templates').all():
+        sync_milestone_template_readiness(mt)
+        for dt in mt.deliverable_templates.all():
+            sync_deliverable_template_readiness(dt)
+
+
+@login_required
+@require_POST
+def sync_template_readiness_view(request):
+    if request.user.role not in ['admin', 'super_admin']:
+        return HttpResponse('Unauthorized', status=403)
+    sync_all_templates_readiness()
+    messages.success(request, 'Successfully synchronized global readiness templates to all existing startups.')
+    return redirect('settings')
 
 @login_required
 def add_milestone_template(request):
@@ -1586,17 +1660,22 @@ def add_milestone_template(request):
                 description=description,
                 milestone_progress=int(progress)
             )
+            milestone_rl_ids = request.POST.getlist('milestone_rl_template_ids')
+            if milestone_rl_ids:
+                newmilestone_template.rl_templates.set(milestone_rl_ids)
 
             for startup in Startup.objects.all():
                 exist = Milestone.objects.filter(startup_id=startup.id, milestone_progress=progress).exists()
                 if not exist:
-                    Milestone.objects.create(
+                    ms_obj = Milestone.objects.create(
                         startup=startup,
                         milestone_progress=progress,
                         title=title,
                         description=description,
                         status='pending'
                     )
+                    for rl in newmilestone_template.rl_templates.all():
+                        MilestoneReadiness.objects.get_or_create(milestone=ms_obj, name=rl.name)
             while count <= deliverable_count:
                 name = "Deliverable " + str(count)
                 requirements = "Requirements for " + title
@@ -1614,7 +1693,7 @@ def add_milestone_template(request):
                     max_position = milestone.deliverables.aggregate(max_position=Max('position'))['max_position']
                     next_position = (max_position + 1) if max_position is not None else 0
                     for position, dt in enumerate(newmilestone_template.deliverable_templates.all(), start=next_position):
-                        Deliverable.objects.create(
+                        deliv = Deliverable.objects.create(
                             milestone=milestone,
                             position=position,
                             template=dt,
@@ -1622,6 +1701,8 @@ def add_milestone_template(request):
                             requirements=dt.requirements or "See template requirements",
                             status='pending'
                         )
+                        for rl in dt.rl_templates.all():
+                            Readiness.objects.get_or_create(deliverable=deliv, name=rl.name)
 
 
             messages.success(request, 'Milestone template added successfully.')
@@ -1678,6 +1759,11 @@ def add_deliverable_template(request):
             for l in new_links:
                 if l.strip():
                     DeliverableTemplateResource.objects.create(template=dt, link=l.strip())
+            
+            rl_ids = request.POST.getlist('rl_template_ids')
+            if rl_ids:
+                dt.rl_templates.set(rl_ids)
+            sync_deliverable_template_readiness(dt)
             messages.success(request, 'Deliverable template added.')
         except Exception as e:
             messages.error(request, f'Failed to add deliverable: {str(e)}')
@@ -1709,6 +1795,10 @@ def edit_milestone_template(request, template_id):
         mt.description = request.POST.get('description', mt.description)
         mt.milestone_progress = request.POST.get('milestone_progress', mt.milestone_progress)
         mt.save()
+
+        milestone_rl_ids = request.POST.getlist('milestone_rl_template_ids')
+        mt.rl_templates.set(milestone_rl_ids)
+        sync_milestone_template_readiness(mt)
 
         messages.success(request, 'Milestone template updated.')
         
@@ -1742,6 +1832,10 @@ def edit_deliverable_template(request, template_id):
         for l in new_links:
             if l.strip():
                 DeliverableTemplateResource.objects.create(template=dt, link=l.strip())
+
+        rl_ids = request.POST.getlist('rl_template_ids')
+        dt.rl_templates.set(rl_ids)
+        sync_deliverable_template_readiness(dt)
 
         messages.success(request, 'Deliverable template updated.')
         

@@ -904,3 +904,129 @@ class SecurityPatchesTest(TestCase):
         self.assertEqual(resp_sa.status_code, 302)
         self.assertFalse(MilestoneTemplate.objects.filter(id=mt.id).exists())
 
+
+class GlobalReadinessLevelTemplateTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.admin = User.objects.create_user(username='rl_admin', password='password123', role='admin')
+        self.super_admin = User.objects.create_user(username='rl_super', password='password123', role='super_admin')
+        self.incubatee = User.objects.create_user(username='rl_incubatee', password='password123', role='incubatee')
+        
+        self.trl = RLTemplate.objects.create(name='TRL')
+        self.crl = RLTemplate.objects.create(name='CRL')
+        self.brl = RLTemplate.objects.create(name='BRL')
+
+        self.mt = MilestoneTemplate.objects.create(title='Phase 1', milestone_progress=1)
+        self.dt = DeliverableTemplate.objects.create(milestone_template=self.mt, name='Prototype')
+
+    def test_template_rl_association(self):
+        self.mt.rl_templates.set([self.trl, self.crl])
+        self.dt.rl_templates.set([self.trl])
+
+        self.assertEqual(self.mt.rl_templates.count(), 2)
+        self.assertEqual(self.dt.rl_templates.count(), 1)
+        self.assertIn(self.trl, self.dt.rl_templates.all())
+
+    def test_add_and_edit_deliverable_template_with_rl(self):
+        self.client.login(username='rl_admin', password='password123')
+        
+        # Add deliverable template with RLs
+        resp = self.client.post(reverse('add_deliverable_template'), {
+            'milestone_template_id': self.mt.id,
+            'name': 'Market Research',
+            'requirements': 'Detailed report',
+            'rl_template_ids': [self.crl.id, self.brl.id],
+        })
+        self.assertRedirects(resp, reverse('settings'))
+        new_dt = DeliverableTemplate.objects.get(name='Market Research')
+        self.assertEqual(set(new_dt.rl_templates.values_list('name', flat=True)), {'CRL', 'BRL'})
+
+        # Edit deliverable template RLs
+        resp = self.client.post(reverse('edit_deliverable_template', args=[new_dt.id]), {
+            'name': 'Market Research Updated',
+            'requirements': 'Updated report',
+            'rl_template_ids': [self.crl.id],
+        })
+        self.assertRedirects(resp, reverse('settings'))
+        new_dt.refresh_from_db()
+        self.assertEqual(set(new_dt.rl_templates.values_list('name', flat=True)), {'CRL'})
+
+    def test_edit_milestone_template_with_rl(self):
+        self.client.login(username='rl_admin', password='password123')
+        resp = self.client.post(reverse('edit_milestone_template', args=[self.mt.id]), {
+            'title': 'Phase 1 Updated',
+            'description': 'Description',
+            'milestone_progress': 1,
+            'milestone_rl_template_ids': [self.trl.id, self.crl.id],
+        })
+        self.assertRedirects(resp, reverse('settings'))
+        self.mt.refresh_from_db()
+        self.assertEqual(set(self.mt.rl_templates.values_list('name', flat=True)), {'TRL', 'CRL'})
+
+    def test_startup_creation_instantiates_template_readiness(self):
+        self.mt.rl_templates.set([self.trl])
+        self.dt.rl_templates.set([self.trl, self.crl])
+
+        self.client.login(username='rl_admin', password='password123')
+        resp = self.client.post(reverse('add_startup'), {
+            'name': 'Auto RL Startup',
+            'description': 'Testing auto readiness instantiation',
+            'email': 'autorl@startup.com',
+            'contact_number': '+123456789',
+            'starting_milestone': 1,
+        })
+        startup = Startup.objects.get(name='Auto RL Startup')
+        self.assertRedirects(resp, reverse('add_member', args=[startup.id]))
+
+        # Verify milestone readiness auto-created
+        ms = startup.milestones.get(milestone_progress=1)
+        self.assertTrue(ms.readiness_levels.filter(name='TRL').exists())
+
+        # Verify deliverable readiness auto-created
+        deliv = ms.deliverables.get(template=self.dt)
+        self.assertTrue(deliv.readiness_levels.filter(name='TRL').exists())
+        self.assertTrue(deliv.readiness_levels.filter(name='CRL').exists())
+
+    def test_sync_templates_readiness_preserves_existing_assessments(self):
+        self.mt.rl_templates.set([self.trl])
+        self.dt.rl_templates.set([self.trl])
+
+        startup = Startup.objects.create(name='Existing Startup', owner=self.incubatee)
+        ms = Milestone.objects.create(startup=startup, milestone_progress=1, title='Phase 1')
+        deliv = Deliverable.objects.create(milestone=ms, template=self.dt, name='Prototype')
+
+        # Existing self-assessment
+        Readiness.objects.create(deliverable=deliv, name='TRL', incubatee_level='Level 4')
+        MilestoneReadiness.objects.create(milestone=ms, name='TRL', admin_level='Level 2')
+
+        # Now update template to add BRL
+        self.dt.rl_templates.add(self.brl)
+        self.mt.rl_templates.add(self.brl)
+
+        # Sync
+        from incubator.views import sync_all_templates_readiness
+        sync_all_templates_readiness()
+
+        # Check deliverable
+        trl_record = deliv.readiness_levels.get(name='TRL')
+        self.assertEqual(trl_record.incubatee_level, 'Level 4') # Preserved!
+        brl_record = deliv.readiness_levels.get(name='BRL')
+        self.assertIsNone(brl_record.incubatee_level) # Newly added!
+
+        # Check milestone
+        ms_trl = ms.readiness_levels.get(name='TRL')
+        self.assertEqual(ms_trl.admin_level, 'Level 2') # Preserved!
+        self.assertTrue(ms.readiness_levels.filter(name='BRL').exists())
+
+    def test_sync_template_readiness_view_permission(self):
+        # Incubatee forbidden
+        self.client.login(username='rl_incubatee', password='password123')
+        resp = self.client.post(reverse('sync_template_readiness'))
+        self.assertEqual(resp.status_code, 403)
+
+        # Admin allowed
+        self.client.login(username='rl_admin', password='password123')
+        resp = self.client.post(reverse('sync_template_readiness'))
+        self.assertRedirects(resp, reverse('settings'))
+
+

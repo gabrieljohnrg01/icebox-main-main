@@ -678,11 +678,13 @@
     }
 
     {{ rls_dict_raw|json_script:"rls-dict-json" }}
+    {{ rl_types|json_script:"rl-types-json" }}
     // Initialization script
     document.addEventListener("DOMContentLoaded", function() {
         const rlsEl = document.getElementById('rls-dict-json');
         const rls = rlsEl ? JSON.parse(rlsEl.textContent) : {};
-        const rlTypes = ['TRL', 'CRL', 'BRL', 'FRL'];
+        const rlTypesEl = document.getElementById('rl-types-json');
+        const rlTypes = rlTypesEl ? JSON.parse(rlTypesEl.textContent) : ['TRL', 'CRL', 'BRL', 'FRL'];
         const isIncubatee = "{{ user.role }}" === "incubatee";
 
         rlTypes.forEach(type => {

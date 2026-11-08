@@ -9,7 +9,7 @@ class LoginForm(forms.Form):
         'autocomplete': 'username',
         'id': 'id_username'
     }))
-    password = forms.CharField(required=False, widget=forms.PasswordInput(attrs={
+    password = forms.CharField(widget=forms.PasswordInput(attrs={
         'class': 'form-control', 
         'placeholder': 'Password',
         'autocomplete': 'current-password',

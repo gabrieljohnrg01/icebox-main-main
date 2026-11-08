@@ -47,6 +47,7 @@ urlpatterns = [
     path('settings/templates/deliverable/add/', views.add_deliverable_template, name='add_deliverable_template'),
     path('settings/templates/deliverable/<int:template_id>/edit/', views.edit_deliverable_template, name='edit_deliverable_template'),
     path('settings/templates/deliverable/<int:template_id>/delete/', views.delete_deliverable_template, name='delete_deliverable_template'),
+    path('settings/templates/sync-readiness/', views.sync_template_readiness_view, name='sync_template_readiness'),
     path('settings/cohorts/add/', views.add_cohort, name='add_cohort'),
     path('settings/cohorts/<int:cohort_id>/edit/', views.edit_cohort, name='edit_cohort'),
     path('settings/cohorts/<int:cohort_id>/delete/', views.delete_cohort, name='delete_cohort'),
